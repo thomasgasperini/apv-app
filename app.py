@@ -8,48 +8,41 @@ from geopy.geocoders import Nominatim
 import folium
 from streamlit_folium import st_folium
 from zoneinfo import ZoneInfo  # ✅ Fuso orario corretto
+from guida import show_pv_guide
 
-# -----------------------
-# Aggiornamento repository
-# -----------------------
-# cd "C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_Software_APV"
-# git add app.py calculations.py config.py plots.py sidebar.py
-# git status
-# git add requirements.txt
-# git commit -m "Rimuovi pywin32 per compatibilità Streamlit Cloud"
-# git push origin main
-
-# -----------------------
-# Per avvio da terminal VSCode
-# -----------------------
-# cd "C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_Software_APV"
-# streamlit run app.py
-
-
-import streamlit as st
 from config import CSS
 from sidebar import sidebar_inputs
 from calculations import calculate_pv
 from plots import plot_graphs
-import pandas as pd
 
+# Applica il CSS globale
 st.markdown(CSS, unsafe_allow_html=True)
 
-# Input sidebar
+# -----------------------
+# Sidebar: Inputs + Guida
+# -----------------------
+st.sidebar.markdown("### ⚙️ Parametri Impianto")
 params = sidebar_inputs()
 
+show_pv_guide()  # Mostra pulsante per aprire la guida in nuova scheda
+
+# -----------------------
 # Calcoli PV
+# -----------------------
 results = calculate_pv(params)
 
+# -----------------------
 # Grafici e metriche
+# -----------------------
 plot_graphs(params, results)
 
-# Tabella dati
+# -----------------------
+# Tabella Dati
+# -----------------------
 st.markdown('<p class="section-header">📋 Dati Orari Dettagliati</p>', unsafe_allow_html=True)
 df = pd.DataFrame({
     "Ora": results["times"].strftime("%H:%M"),
     "POA [W/m²]": results["poa"]['poa_global'].round(0),
-    "T_cell [°C]": results["T_cell"].round(1),
     "P_DC [W]": results["P_dc"].round(1),
     "P_AC [W]": results["P_ac"].round(1),
 })

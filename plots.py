@@ -88,6 +88,7 @@ def plot_graphs(params, results):
             </div>
             """, unsafe_allow_html=True)
 
+
     # -----------------------
     # 📈 Grafici affiancati: Produzione & Irradianza
     # -----------------------
