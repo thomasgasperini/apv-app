@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
+import screeninfo
 
 def plot_graphs(params, results):
     times = results["times"]

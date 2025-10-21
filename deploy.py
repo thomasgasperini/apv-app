@@ -5,11 +5,9 @@ from datetime import datetime
 # -----------------------------
 # CONFIGURAZIONE
 # -----------------------------
-# Cartella locale del tuo repo Git
 REPO_PATH = r"C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_Software_APV"  # Modifica con il tuo path reale
-
-# Messaggio di commit automatico
 COMMIT_MESSAGE = f"Aggiornamento app {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+REQUIREMENTS_FILE = "requirements.txt"
 
 # -----------------------------
 # FUNZIONE DI ESECUZIONE COMANDI
@@ -22,6 +20,19 @@ def run_command(cmd, cwd=None):
         print(f"Errore:\n{result.stderr}")
         raise Exception(f"Comando fallito: {' '.join(cmd)}")
     print(result.stdout)
+
+# -----------------------------
+# 0️⃣ Genera requirements.txt
+# -----------------------------
+print("➡️ Generazione requirements.txt...")
+requirements_path = os.path.join(REPO_PATH, REQUIREMENTS_FILE)
+with open(requirements_path, "w") as f:
+    result = subprocess.run(["pip", "freeze"], text=True, capture_output=True)
+    if result.returncode != 0:
+        print(f"Errore pip freeze:\n{result.stderr}")
+        raise Exception("Impossibile generare requirements.txt")
+    f.write(result.stdout)
+print(f"✅ {REQUIREMENTS_FILE} aggiornato.")
 
 # -----------------------------
 # 1️⃣ Controlla se ci sono modifiche da commit
