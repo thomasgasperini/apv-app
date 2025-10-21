@@ -9,7 +9,6 @@ import folium
 from streamlit_folium import st_folium
 from zoneinfo import ZoneInfo  # ✅ Fuso orario corretto
 from guida import show_pv_guide
-
 from config import CSS
 from sidebar import sidebar_inputs
 from calculations import calculate_pv
@@ -21,7 +20,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 # -----------------------
 # Sidebar: Inputs + Guida
 # -----------------------
-st.sidebar.markdown("### ⚙️ Parametri Impianto")
+
 params = sidebar_inputs()
 
 show_pv_guide()  # Mostra pulsante per aprire la guida in nuova scheda
