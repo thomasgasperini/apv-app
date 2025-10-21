@@ -2,8 +2,19 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
-import screeninfo
+from datetime import datetime
 
+# -----------------------
+# Configurazione pagina
+# -----------------------
+st.set_page_config(
+    page_title="Analisi Produzione Fotovoltaico",
+    layout="wide"
+)
+
+# -----------------------
+# Funzione principale per plottare i risultati
+# -----------------------
 def plot_graphs(params, results):
     times = results["times"]
     P_ac = results["P_ac"]
@@ -15,12 +26,18 @@ def plot_graphs(params, results):
     lon = params["lon"]
     location = params.get("location", None)
 
+    # Tentativo di rilevare la larghezza dello schermo
+    try:
+        from screeninfo import get_monitors
+        screen_width = get_monitors()[0].width
+    except:
+        screen_width = 1200  # fallback desktop
+
     # -----------------------
     # ⚡ Risultati principali (card HTML/CSS)
     # -----------------------
     st.markdown('<p class="section-header">⚡ Risultati di Produzione</p>', unsafe_allow_html=True)
 
-    # Prepara le card
     metric_cards = [
         f"""
         <div class="metric-card">
@@ -48,36 +65,28 @@ def plot_graphs(params, results):
         """
     ]
 
-    # Responsive: 4 colonne su desktop, 2 su tablet, 1 su mobile
-    width = st.columns([1]*4)
-    if st.runtime.exists():  # fallback: semplicemente mostra in colonna su mobile
-        try:
-            from screeninfo import get_monitors
-            screen_width = get_monitors()[0].width
-        except:
-            screen_width = 1200  # default desktop
-
-    if screen_width > 1024:  # desktop
-        cols = st.columns(4)
+    # Distribuzione responsive delle card
+    if screen_width > 1024:  # desktop → 4 colonne
+        cols = st.columns(4, gap="medium")
         for c, card in zip(cols, metric_cards):
             c.markdown(card, unsafe_allow_html=True)
-    elif screen_width > 600:  # tablet
+    elif screen_width > 600:  # tablet → 2 colonne
         for i in range(0, 4, 2):
-            cols = st.columns(2)
+            cols = st.columns(2, gap="medium")
             for c, card in zip(cols, metric_cards[i:i+2]):
                 c.markdown(card, unsafe_allow_html=True)
-    else:  # mobile
+    else:  # mobile → 1 colonna
         for card in metric_cards:
             st.markdown(card, unsafe_allow_html=True)
 
     # -----------------------
-    # 🗺️ Mappa Interattiva
+    # 🗺️ Mappa Interattiva + Info
     # -----------------------
     if location:
         st.markdown('<p class="section-header">📍 Localizzazione Impianto</p>', unsafe_allow_html=True)
-        col_map, col_info = st.columns([2, 1])
 
-        # Altezza mappa adattiva
+        col_map, col_info = st.columns([3, 1], gap="medium")  # map più grande, info laterale
+
         height_map = 300 if screen_width <= 480 else 400
 
         with col_map:
@@ -108,43 +117,51 @@ def plot_graphs(params, results):
             </div>
             """, unsafe_allow_html=True)
 
-    # -----------------------
-    # 📈 Grafici affiancati: Produzione & Irradianza
-    # -----------------------
-    st.markdown('<p class="section-header">📈 Analisi Dettagliata</p>', unsafe_allow_html=True)
+        # -----------------------
+        # 📈 Grafici Produzione & Irradianza in unica figura
+        # -----------------------
+        st.markdown('<p class="section-header">📈 Analisi Dettagliata</p>', unsafe_allow_html=True)
 
-    # Adatta grafici: due colonne su desktop/tablet, stacking su mobile
-    if screen_width > 768:
-        col_prod, col_irr = st.columns(2)
-    else:
-        col_prod = col_irr = st.container()  # stacking verticale
+        # Stacking su mobile, affiancati su desktop/tablet
+        if screen_width > 768:
+            container = st.container()
+        else:
+            container = st.container()
 
-    # Grafico Produzione
-    with col_prod:
-        fig, ax = plt.subplots(figsize=(max(4, min(6, screen_width/200)), 4))
-        ax.fill_between(times, P_ac, alpha=0.3, color='#74a65b')
-        ax.plot(times, P_ac, linewidth=2.5, color='#74a65b', label='Potenza AC')
-        ax.set_xlabel('Ora del giorno')
+        # Definiamo dimensione unica della figura
+        fig_width = max(10, min(14, screen_width / 100))  # larghezza totale
+        fig_height = 4  # stessa altezza per entrambi
+
+        # Creiamo subplot affiancati
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(fig_width, fig_height), constrained_layout=True)
+
+        # -----------------------
+        # Grafico Produzione
+        # -----------------------
+        ax1.fill_between(times, P_ac, alpha=0.3, color='#74a65b')
+        ax1.plot(times, P_ac, linewidth=2.5, color='#74a65b', label='Potenza AC')
+        ax1.set_xlabel('Ora del giorno')
+        ax1.set_ylabel('Potenza [W]')
+        ax1.set_title(f'Produzione - {comune} ({data})')
+        ax1.grid(True, linestyle='--', alpha=0.3)
+        ax1.legend()
         step = max(1, len(times)//8)
-        ax.set_xticks(times[::step])
-        ax.set_xticklabels(times[::step].strftime("%H:%M"), rotation=45)
-        ax.set_ylabel('Potenza [W]')
-        ax.set_title(f'Produzione - {comune} ({data})')
-        ax.grid(True, linestyle='--', alpha=0.3)
-        ax.legend()
-        st.pyplot(fig)
+        ax1.set_xticks(times[::step])
+        ax1.set_xticklabels([t.strftime("%H:%M") for t in times[::step]], rotation=45)
 
-    # Grafico Irradianza
-    with col_irr:
-        fig2, ax2 = plt.subplots(figsize=(max(4, min(6, screen_width/200)), 4))
+        # -----------------------
+        # Grafico Irradianza
+        # -----------------------
         ax2.plot(times, clearsky['ghi'], label='GHI', color='#f39c12')
         ax2.plot(times, clearsky['dni'], label='DNI', color='#e74c3c')
         ax2.plot(times, poa['poa_global'], label='POA', color='#74a65b')
         ax2.set_xlabel('Ora del giorno')
-        ax2.set_xticks(times[::step])
-        ax2.set_xticklabels(times[::step].strftime("%H:%M"), rotation=45)
         ax2.set_ylabel('Irradianza [W/m²]')
         ax2.set_title('Irradianza Solare')
         ax2.grid(True, linestyle='--', alpha=0.3)
         ax2.legend()
-        st.pyplot(fig2)
+        ax2.set_xticks(times[::step])
+        ax2.set_xticklabels([t.strftime("%H:%M") for t in times[::step]], rotation=45)
+
+        # Mostriamo la figura in Streamlit
+        st.pyplot(fig, use_container_width=True)

@@ -48,7 +48,19 @@ df = pd.DataFrame({
 })
 st.dataframe(df, use_container_width=True, height=400)
 
-# Download CSV
+st.markdown(
+    """
+    <style>
+    div.stDownloadButton button {
+        background-color: #74a65b;
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Bottone download
 csv = df.to_csv(index=False).encode('utf-8')
 st.download_button(
     label="📥 Scarica dati CSV",
@@ -56,3 +68,4 @@ st.download_button(
     file_name=f"pv_data_{params['comune']}_{params['data']}.csv",
     mime="text/csv"
 )
+

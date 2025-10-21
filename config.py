@@ -13,13 +13,33 @@ div[data-testid="stAppViewContainer"] > .main, div[data-testid="stSidebar"] {
     color: #000 !important;
 }
 
-/* Container principale */
+/* Container principale - Full Width */
 .main .block-container {
-    width: 100%;
-    max-width: min(1500px, 100vw);
-    padding: clamp(1rem, 2vw, 2rem) clamp(0.75rem, 2vw, 1rem);
-    margin: 0 auto;
-    transition: all 0.2s ease-in-out;
+    width: 100% !important;
+    max-width: none !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    margin: 0 !important;
+}
+
+/* Rimuovi tutti i padding e limiti di Streamlit */
+.main, section.main, [data-testid="stAppViewContainer"] .main {
+    padding: 0 !important;
+    max-width: none !important;
+}
+
+section.main > div, section.main > div > div {
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+}
+
+.appview-container .main .block-container {
+    max-width: none !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
 }
 
 /* Sidebar */
@@ -154,7 +174,7 @@ div[data-testid="stAppViewContainer"] > .main, div[data-testid="stSidebar"] {
     box-shadow: 0 5px 15px rgba(116,166,91,0.4);
 }
 
-/* === GRID RESPONSIVA PER LE METRICHE === */
+/* Grid responsiva per le metriche */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
