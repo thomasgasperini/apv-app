@@ -18,7 +18,10 @@ ESSENTIAL_LIBS = [
     "rich",
     "markdown-it-py",
     "mdurl",
-    "pygments"
+    "pygments",
+    "screeninfo",      # aggiunta per evitare ModuleNotFoundError
+    "matplotlib",      # aggiunta comune per grafici
+    "seaborn"          # aggiunta comune per grafici
 ]
 
 # -----------------------------
