@@ -1,0 +1,47 @@
+import os
+import subprocess
+from datetime import datetime
+
+# -----------------------------
+# CONFIGURAZIONE
+# -----------------------------
+# Cartella locale del tuo repo Git
+REPO_PATH = r"C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_Software_APV"  # Modifica con il tuo path reale
+
+# Messaggio di commit automatico
+COMMIT_MESSAGE = f"Aggiornamento app {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+# -----------------------------
+# FUNZIONE DI ESECUZIONE COMANDI
+# -----------------------------
+def run_command(cmd, cwd=None):
+    """Esegue un comando shell e stampa l'output."""
+    print(f"Eseguo: {' '.join(cmd)}")
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
+    if result.returncode != 0:
+        print(f"Errore:\n{result.stderr}")
+        raise Exception(f"Comando fallito: {' '.join(cmd)}")
+    print(result.stdout)
+
+# -----------------------------
+# 1️⃣ Controlla se ci sono modifiche da commit
+# -----------------------------
+print("➡️ Verifica modifiche locali...")
+result = subprocess.run(["git", "status", "--porcelain"], cwd=REPO_PATH, text=True, capture_output=True)
+if result.stdout.strip() == "":
+    print("✅ Nessuna modifica da commit. Streamlit Cloud rimarrà aggiornato con l'ultima versione.")
+else:
+    # -----------------------------
+    # 2️⃣ Git add, commit e push
+    # -----------------------------
+    print("➡️ Aggiornamento repository Git...")
+    run_command(["git", "add", "."], cwd=REPO_PATH)
+    run_command(["git", "commit", "-m", COMMIT_MESSAGE], cwd=REPO_PATH)
+    run_command(["git", "push"], cwd=REPO_PATH)
+    print("✅ Repository aggiornato su GitHub!")
+
+# -----------------------------
+# 3️⃣ Streamlit Cloud
+# -----------------------------
+print("➡️ Deploy su Streamlit Cloud completato!")
+print("Nota: Streamlit Cloud aggiornerà automaticamente l'app dal repository GitHub.")

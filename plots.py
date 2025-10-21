@@ -2,11 +2,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
-import pandas as pd
-from config import CSS  # Importa il CSS globale
-
-# Applica il CSS (già fatto in config.py, ma sicuro)
-st.markdown(CSS, unsafe_allow_html=True)
 
 def plot_graphs(params, results):
     times = results["times"]
@@ -23,35 +18,56 @@ def plot_graphs(params, results):
     # ⚡ Risultati principali (card HTML/CSS)
     # -----------------------
     st.markdown('<p class="section-header">⚡ Risultati di Produzione</p>', unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
 
-    col1.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Energia Giornaliera</div>
-        <div class="metric-value">{results['E_day']:.2f} kWh</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Prepara le card
+    metric_cards = [
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">Energia Giornaliera</div>
+            <div class="metric-value">{results['E_day']:.2f} kWh</div>
+        </div>
+        """,
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">Picco di Potenza</div>
+            <div class="metric-value">{P_ac.max():.0f} W</div>
+        </div>
+        """,
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">Irradianza Max</div>
+            <div class="metric-value">{poa['poa_global'].max():.0f} W/m²</div>
+        </div>
+        """,
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">Energia Annuale Est.</div>
+            <div class="metric-value">{results['E_day']*365:.0f} kWh</div>
+        </div>
+        """
+    ]
 
-    col2.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Picco di Potenza</div>
-        <div class="metric-value">{P_ac.max():.0f} W</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Responsive: 4 colonne su desktop, 2 su tablet, 1 su mobile
+    width = st.columns([1]*4)
+    if st.runtime.exists():  # fallback: semplicemente mostra in colonna su mobile
+        try:
+            from screeninfo import get_monitors
+            screen_width = get_monitors()[0].width
+        except:
+            screen_width = 1200  # default desktop
 
-    col3.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Irradianza Max</div>
-        <div class="metric-value">{poa['poa_global'].max():.0f} W/m²</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col4.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Energia Annuale Est.</div>
-        <div class="metric-value">{results['E_day']*365:.0f} kWh</div>
-    </div>
-    """, unsafe_allow_html=True)
+    if screen_width > 1024:  # desktop
+        cols = st.columns(4)
+        for c, card in zip(cols, metric_cards):
+            c.markdown(card, unsafe_allow_html=True)
+    elif screen_width > 600:  # tablet
+        for i in range(0, 4, 2):
+            cols = st.columns(2)
+            for c, card in zip(cols, metric_cards[i:i+2]):
+                c.markdown(card, unsafe_allow_html=True)
+    else:  # mobile
+        for card in metric_cards:
+            st.markdown(card, unsafe_allow_html=True)
 
     # -----------------------
     # 🗺️ Mappa Interattiva
@@ -59,6 +75,9 @@ def plot_graphs(params, results):
     if location:
         st.markdown('<p class="section-header">📍 Localizzazione Impianto</p>', unsafe_allow_html=True)
         col_map, col_info = st.columns([2, 1])
+
+        # Altezza mappa adattiva
+        height_map = 300 if screen_width <= 480 else 400
 
         with col_map:
             m = folium.Map(location=[lat, lon], zoom_start=6, tiles='Cartodb Positron')
@@ -68,7 +87,7 @@ def plot_graphs(params, results):
                 popup=f"<b>{comune}</b><br>Lat: {lat:.4f}<br>Lon: {lon:.4f}",
                 icon=folium.Icon(color='green', icon='sun', prefix='fa')
             ).add_to(m)
-            st_folium(m, width="100%", height=400)
+            st_folium(m, width="100%", height=height_map)
 
         with col_info:
             st.markdown(f"""
@@ -88,21 +107,26 @@ def plot_graphs(params, results):
             </div>
             """, unsafe_allow_html=True)
 
-
     # -----------------------
     # 📈 Grafici affiancati: Produzione & Irradianza
     # -----------------------
     st.markdown('<p class="section-header">📈 Analisi Dettagliata</p>', unsafe_allow_html=True)
-    col_prod, col_irr = st.columns(2)
+
+    # Adatta grafici: due colonne su desktop/tablet, stacking su mobile
+    if screen_width > 768:
+        col_prod, col_irr = st.columns(2)
+    else:
+        col_prod = col_irr = st.container()  # stacking verticale
 
     # Grafico Produzione
     with col_prod:
-        fig, ax = plt.subplots(figsize=(6,4))
+        fig, ax = plt.subplots(figsize=(max(4, min(6, screen_width/200)), 4))
         ax.fill_between(times, P_ac, alpha=0.3, color='#74a65b')
         ax.plot(times, P_ac, linewidth=2.5, color='#74a65b', label='Potenza AC')
         ax.set_xlabel('Ora del giorno')
-        ax.set_xticks(times[::max(1, len(times)//8)])
-        ax.set_xticklabels(times[::max(1, len(times)//8)].strftime("%H:%M"), rotation=45)
+        step = max(1, len(times)//8)
+        ax.set_xticks(times[::step])
+        ax.set_xticklabels(times[::step].strftime("%H:%M"), rotation=45)
         ax.set_ylabel('Potenza [W]')
         ax.set_title(f'Produzione - {comune} ({data})')
         ax.grid(True, linestyle='--', alpha=0.3)
@@ -111,13 +135,13 @@ def plot_graphs(params, results):
 
     # Grafico Irradianza
     with col_irr:
-        fig2, ax2 = plt.subplots(figsize=(6,4))
+        fig2, ax2 = plt.subplots(figsize=(max(4, min(6, screen_width/200)), 4))
         ax2.plot(times, clearsky['ghi'], label='GHI', color='#f39c12')
         ax2.plot(times, clearsky['dni'], label='DNI', color='#e74c3c')
         ax2.plot(times, poa['poa_global'], label='POA', color='#74a65b')
         ax2.set_xlabel('Ora del giorno')
-        ax2.set_xticks(times[::max(1, len(times)//8)])
-        ax2.set_xticklabels(times[::max(1, len(times)//8)].strftime("%H:%M"), rotation=45)
+        ax2.set_xticks(times[::step])
+        ax2.set_xticklabels(times[::step].strftime("%H:%M"), rotation=45)
         ax2.set_ylabel('Irradianza [W/m²]')
         ax2.set_title('Irradianza Solare')
         ax2.grid(True, linestyle='--', alpha=0.3)
