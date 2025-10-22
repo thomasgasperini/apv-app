@@ -7,11 +7,25 @@ from config import DEFAULT_PARAMS, LOGO_URL, TIMEZONE
 
 def display_sidebar_header():
     st.sidebar.markdown(f"""
-    <div style="text-align:center; padding:1rem;">
-        <img src="{LOGO_URL}" style="max-width:85%; height:auto;">
+    <div style="
+        text-align:center;
+        padding:1rem;
+        margin-bottom:2rem;
+        margin-top:-3rem;
+        background: linear-gradient(135deg, #74a65b, #f9d71c);
+        border-radius: 15px;
+        overflow: hidden; /* Nasconde la parte dell'immagine fuori dai limiti */
+        height: 240px; /* Controlla l'altezza visibile del logo (crop) */
+    ">
+        <img src="{LOGO_URL}" 
+             style="
+                width:100%;
+                height:auto;
+                object-fit: cover;
+                object-position: center bottom; /* Regola la parte visibile */
+             ">
     </div>
     """, unsafe_allow_html=True)
-    st.sidebar.markdown("### ⚙️ Configurazione Simulatore")
 
 def get_location_inputs():
     with st.sidebar.expander("📍 Localizzazione", expanded=True):
