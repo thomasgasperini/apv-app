@@ -9,22 +9,6 @@ REPO_PATH = r"C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_S
 COMMIT_MESSAGE = f"Aggiornamento app {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 REQUIREMENTS_FILE = "requirements.txt"
 
-# Librerie essenziali per Streamlit app
-ESSENTIAL_LIBS = [
-    "streamlit",
-    "pandas",
-    "numpy",
-    "Pillow",
-    "rich",
-    "markdown-it-py",
-    "mdurl",
-    "pygments",
-    "screeninfo",      # aggiunta per evitare ModuleNotFoundError
-    "matplotlib",      # aggiunta comune per grafici
-    "seaborn"          # aggiunta comune per grafici
-    "geopy"
-]
-
 # -----------------------------
 # FUNZIONE DI ESECUZIONE COMANDI
 # -----------------------------
@@ -33,46 +17,26 @@ def run_command(cmd, cwd=None):
     print(f"Eseguo: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
     if result.returncode != 0:
-        print(f"Errore:\n{result.stderr}")
+        print(f"❌ Errore:\n{result.stderr}")
         raise Exception(f"Comando fallito: {' '.join(cmd)}")
     print(result.stdout)
 
 # -----------------------------
-# 0️⃣ Aggiorna pip
+# 0️⃣ Aggiorna pip e installa pipreqs
 # -----------------------------
-print("➡️ Aggiornamento pip...")
+print("➡️ Aggiornamento pip e installazione pipreqs...")
 run_command(["python", "-m", "pip", "install", "--upgrade", "pip"])
+run_command(["pip", "install", "pipreqs"])
 
 # -----------------------------
-# 1️⃣ Leggi pip freeze
+# 1️⃣ Genera requirements.txt automaticamente con pipreqs
 # -----------------------------
-print("➡️ Lettura delle librerie installate...")
-result = subprocess.run(["pip", "freeze"], text=True, capture_output=True)
-if result.returncode != 0:
-    raise Exception("Errore durante pip freeze:\n" + result.stderr)
-
-installed_packages = result.stdout.strip().split("\n")
+print("➡️ Generazione automatica di requirements.txt con pipreqs...")
+run_command(["pipreqs", ".", "--force", "--encoding=utf-8"], cwd=REPO_PATH)
+print("✅ requirements.txt generato automaticamente in base alle importazioni effettive.")
 
 # -----------------------------
-# 2️⃣ Filtra solo librerie essenziali
-# -----------------------------
-filtered_packages = []
-for pkg in installed_packages:
-    name = pkg.split("==")[0].lower()
-    if name in [lib.lower() for lib in ESSENTIAL_LIBS]:
-        filtered_packages.append(pkg)
-
-# -----------------------------
-# 3️⃣ Scrivi requirements.txt
-# -----------------------------
-requirements_path = os.path.join(REPO_PATH, REQUIREMENTS_FILE)
-print(f"➡️ Scrittura di {REQUIREMENTS_FILE}...")
-with open(requirements_path, "w") as f:
-    f.write("\n".join(filtered_packages))
-print(f"✅ {REQUIREMENTS_FILE} generato con librerie essenziali.")
-
-# -----------------------------
-# 4️⃣ Controlla modifiche git
+# 2️⃣ Controlla modifiche git
 # -----------------------------
 print("➡️ Verifica modifiche locali...")
 result = subprocess.run(["git", "status", "--porcelain"], cwd=REPO_PATH, text=True, capture_output=True)
@@ -80,7 +44,7 @@ if result.stdout.strip() == "":
     print("✅ Nessuna modifica da commit. Streamlit Cloud rimarrà aggiornato.")
 else:
     # -----------------------------
-    # 5️⃣ Git add, commit e push
+    # 3️⃣ Git add, commit e push
     # -----------------------------
     print("➡️ Aggiornamento repository Git...")
     run_command(["git", "add", "."], cwd=REPO_PATH)
@@ -89,7 +53,8 @@ else:
     print("✅ Repository aggiornato su GitHub!")
 
 # -----------------------------
-# 6️⃣ Deploy su Streamlit Cloud
+# 4️⃣ Deploy su Streamlit Cloud
 # -----------------------------
 print("➡️ Deploy su Streamlit Cloud completato!")
-print("Nota: Streamlit Cloud aggiornerà automaticamente l'app dal repository GitHub.")
+print("ℹ️ Streamlit Cloud aggiornerà automaticamente l'app dal repository GitHub.")
+print("✅ Processo di deploy completato con successo.")
