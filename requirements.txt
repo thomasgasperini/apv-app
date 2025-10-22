@@ -4,5 +4,4 @@ pandas==2.3.3
 pillow==11.3.0
 Pygments==2.19.2
 screeninfo==0.8.1
-seaborn==0.13.2
 streamlit==1.50.0

@@ -22,6 +22,7 @@ ESSENTIAL_LIBS = [
     "screeninfo",      # aggiunta per evitare ModuleNotFoundError
     "matplotlib",      # aggiunta comune per grafici
     "seaborn"          # aggiunta comune per grafici
+    "geopy"
 ]
 
 # -----------------------------
