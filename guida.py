@@ -1,11 +1,9 @@
-# guida.py
 import streamlit as st
 
 def show_pv_guide():
     """
-    Mostra una guida dettagliata con tutte le equazioni utilizzate nei calcoli PV,
-    la logica dei calcoli e le relative fonti bibliografiche, direttamente in Streamlit.
-    Visualizzazione tramite pulsante elegante.
+    Mostra una guida tecnica completa sui calcoli fotovoltaici e sulla radiazione utile al suolo (Agro-FV),
+    con formule, spiegazioni di ciascun termine e origine dei dati.
     """
     # Stato del pulsante
     if 'show_guide' not in st.session_state:
@@ -15,82 +13,106 @@ def show_pv_guide():
     if st.button("📖 Mostra Guida PV"):
         st.session_state.show_guide = not st.session_state.show_guide
 
-    # Mostra contenuto solo se stato attivo
     if st.session_state.show_guide:
+        # Introduzione
         st.markdown("""
-        ## Guida ai Calcoli Fotovoltaici
+        ## Guida Tecnica ai Calcoli Fotovoltaici
 
-        Questa guida spiega la logica dei calcoli utilizzati per simulare la produzione elettrica 
-        di un impianto fotovoltaico, distinguendo tra energia solare incidente, energia prodotta e 
-        radiazione utile per coltivazioni sotto i pannelli (Agro-FV).
+        Questa guida descrive in dettaglio come il modulo `calculations.py`:
+        - Stima la radiazione incidente sui pannelli (POA)
+        - Calcola la potenza DC e AC prodotta
+        - Determina l'energia giornaliera per ettaro
+        - Valuta la radiazione residua utile per coltivazioni sotto i pannelli (Agro-FV)
+        """)
 
-        ### 1. Posizione Solare
-        La posizione del sole dipende da latitudine, longitudine e ora del giorno:
-        $$\\text{Solar Zenith}, \\text{Solar Azimuth} = f(\\text{latitudine, longitudine, tempo})$$
-        - **Zenith**: angolo tra il sole e la verticale locale  
-        - **Azimuth**: direzione del sole rispetto al Nord  
-        **Fonte:** [PVLib Solar Position](https://pvlib-python.readthedocs.io/en/stable/solarposition.html)
+        st.markdown("---")
 
-        ### 2. Irradianza sul Piano dei Pannelli (POA)
-        L'irradianza totale sul pannello combina:
-        - componente diretta (DNI)
-        - componente diffusa (DHI)
-        - riflessione dal terreno (GHI * albedo)
+        # Flusso dei calcoli
+        st.markdown("### 1. Flusso dei Calcoli")
+        st.markdown("""
+        1. Inserimento parametri da parte dell'utente:
+           latitudine, longitudine, tilt e azimuth del modulo, area e efficienza,
+           coefficiente di temperatura, pitch laterale e tra file, NOCT, perdite.
+        2. Generazione della timeline oraria per il giorno selezionato.
+        3. Calcolo della posizione solare (Zenith e Azimuth) tramite PVLib.
+        4. Stima della radiazione teorica in cielo sereno (GHI, DNI, DHI) tramite PVLib.
+        5. Calcolo della radiazione sul piano dei pannelli (POA) combinando radiazione diretta, diffusa e riflessa.
+        6. Calcolo della temperatura della cella (T_cell) in funzione di POA e NOCT.
+        7. Calcolo della potenza DC del modulo.
+        8. Calcolo della potenza AC considerando le perdite del sistema.
+        9. Somma della potenza AC per ottenere l'energia giornaliera per ettaro (E_day).
+        10. Calcolo della frazione di luce che raggiunge il suolo (f_luce) e della radiazione residua utile (E_suolo).
+        """)
 
-        $$POA = DNI \\cdot \\cos(\\theta_i) + DHI \\cdot \\frac{1 + \\cos(\\beta)}{2} + GHI \\cdot \\rho \\cdot \\frac{1 - \\cos(\\beta)}{2}$$
-        dove:
-        - $\\theta_i$: angolo di incidenza dei raggi solari sul pannello  
-        - $\\beta$: tilt del pannello  
-        - $\\rho$: albedo del terreno  
-        - DNI, DHI, GHI: componenti solari misurate  
-        **Fonte:** Duffie & Beckman, *Solar Engineering of Thermal Processes*, 4th Edition, Wiley, 2013
+        st.markdown("---")
 
-        ### 3. Temperatura della Cella
-        La temperatura effettiva della cella influenza l'efficienza:
-        $$T_{cell} = T_{amb} + \\frac{NOCT - 20}{800} \\cdot POA$$
-        - $T_{amb}$: temperatura ambiente (°C)  
-        - NOCT: temperatura nominale della cella a condizioni standard  
-        - POA: irradiamento sul piano pannello  
-        **Fonte:** PVLib Python
+        # Terminologia
+        st.markdown("### 2. Terminologia e Definizioni")
+        st.markdown("""
+        - **GHI (Global Horizontal Irradiance):** radiazione totale su superficie orizzontale [W/m²]  
+        - **DNI (Direct Normal Irradiance):** radiazione diretta perpendicolare ai raggi solari [W/m²]  
+        - **DHI (Diffuse Horizontal Irradiance):** radiazione diffusa su superficie orizzontale [W/m²]  
+        - **POA (Plane of Array Irradiance):** radiazione totale incidente sul piano inclinato dei pannelli  
+        - **T_cell (Temperatura cella):** temperatura effettiva della cella, funzione di POA e NOCT  
+        - **P_dc:** potenza DC generata dal modulo  
+        - **P_ac:** potenza AC disponibile dopo le perdite di sistema  
+        - **E_day:** energia giornaliera prodotta per ettaro [kWh/ha]  
+        - **f_luce:** frazione di suolo illuminata tra le file di pannelli  
+        - **E_suolo:** radiazione al suolo disponibile per coltivazioni [kWh/m²]
+        """)
 
-        ### 4. Potenza DC del Modulo
-        La potenza elettrica generata dal modulo dipende da area, efficienza e temperatura:
-        $$P_{dc} = POA \\cdot A \\cdot \\eta \\cdot \\left(1 + \\gamma (T_{cell}-25)\\right)$$
-        - $A$: area del modulo [m²]  
-        - $\\eta$: efficienza del modulo  
-        - $\\gamma$: coefficiente di temperatura (%/°C)  
-        - $T_{cell}$: temperatura effettiva della cella  
-        **Fonte:** IEC 61853-1
+        st.markdown("---")
 
-        ### 5. Potenza AC
-        Considerando le perdite di sistema (inverter, cablaggi, mismatch, sporco):
-        $$P_{ac} = P_{dc} \\cdot (1 - \\text{losses})$$
-        - losses: percentuale di perdite totali del sistema  
-        **Fonte:** IEC 61724
+        # Formule principali
+        st.markdown("### 3. Formule Principali")
 
-        ### 6. Energia Giornaliera
-        L'energia giornaliera prodotta si calcola sommando la potenza AC istantanea:
-        $$E_{day} = \\sum P_{ac} \\cdot \\Delta t$$
-        - $\\Delta t$: intervallo temporale (tipicamente 1 h)  
-        - Valore espresso in kWh/ha  
-        **Fonte:** Calcolo numerico basato su PVLib
+        st.markdown("#### 3.1 Radiazione sul piano dei pannelli (POA)")
+        st.latex(r"POA = DNI \cdot \cos(\theta_i) + DHI \cdot \frac{1 + \cos(\beta)}{2} + GHI \cdot \rho \cdot \frac{1 - \cos(\beta)}{2}")
 
-        ### 7. Energia Solare Disponibile al Suolo (Agro-FV)
-        Considera l'ombra dei pannelli e il pitch tra file/pannelli:
-        $$E_{suolo} = GHI \\cdot f_{luce}$$
-        - $f_{luce}$: frazione di suolo illuminata  
-        - Serve per valutare coltivazioni sotto i pannelli (Agro-FV)
+        st.markdown("#### 3.2 Temperatura della cella")
+        st.latex(r"T_{cell} = T_{amb} + \frac{NOCT - 20}{800} \cdot POA")
 
-        ### 8. Fattori Geometrici
-        - **Area Totale Pannelli:** superficie fisica dei pannelli installati  
-        - **Superficie Effettiva Occupata:** include spazi tra file  
-        - **Land Area Occupation Ratio:** rapporto tra pannelli e area del sito  
-        - **Tilt / Azimuth / Pitch:** orientamento e disposizione pannelli  
-        - **Albedo / Perdite:** riflettanza del terreno e perdite complessive impianto
+        st.markdown("#### 3.3 Potenza DC del modulo")
+        st.latex(r"P_{dc} = POA \cdot A \cdot \eta \cdot \left(1 + \gamma (T_{cell}-25)\right)")
 
-        ### Bibliografia
-        - PVLib Python Documentation: [https://pvlib-python.readthedocs.io/](https://pvlib-python.readthedocs.io/)  
+        st.markdown("#### 3.4 Potenza AC")
+        st.latex(r"P_{ac} = P_{dc} \cdot (1 - losses)")
+
+        st.markdown("#### 3.5 Energia giornaliera per ettaro")
+        st.latex(r"E_{day} = \sum P_{ac} \cdot \Delta t")
+
+        st.markdown("#### 3.6 Radiazione al suolo (Agro-FV)")
+        st.latex(r"f_{luce} = \frac{pitch_{file} - p_{proj}}{pitch_{file}} \cdot \frac{pitch_{lat} - L}{pitch_{lat}}")
+        st.latex(r"E_{suolo} = GHI \cdot f_{luce}")
+
+        st.markdown("#### 3.7 Fattori geometrici")
+        st.markdown("""
+        - Superficie totale pannelli: numero_pannelli * pitch_laterale * pitch_file  
+        - Fattore di copertura: superficie_totale / HECTARE_M2 (max = 1)
+        """)
+
+        st.markdown("---")
+
+        # Origine dei dati
+        st.markdown("### 4. Origine dei dati")
+        st.markdown("""
+        - **POA, GHI, DNI, DHI:** calcolati da PVLib Python (modello *ineichen* per cielo sereno)  
+        - **Posizione solare (Zenith, Azimuth):** calcolata da PVLib  
+        - **Parametri termici e geometrici:** forniti dall'utente (T_amb, NOCT, tilt, azimuth, area, efficienza, pitch)  
+        - **f_luce e E_suolo:** calcolati geometricamente dal codice, basandosi su tilt, pitch e dimensioni dei pannelli  
+
+        <div style='background-color:#f0f0f0;padding:10px;border-left:4px solid #0077b6;'>
+        Nota: PVLib fornisce valori teorici derivati da modelli scientifici; per valori reali occorrerebbero misurazioni o dataset meteorologici.
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Bibliografia
+        st.markdown("### 5. Bibliografia")
+        st.markdown("""
+        - PVLib Python Documentation: [https://pvlib-python.readthedocs.io](https://pvlib-python.readthedocs.io)  
         - Duffie, J.A. & Beckman, W.A., *Solar Engineering of Thermal Processes*, 4th Edition, Wiley, 2013  
         - IEC 61853-1: *Photovoltaic module performance testing and energy rating*  
         - IEC 61724: *Photovoltaic system performance monitoring – Guidelines for measurement, data exchange, and analysis*
-        """, unsafe_allow_html=True)
+        """)
