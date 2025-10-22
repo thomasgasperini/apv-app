@@ -1,3 +1,14 @@
+# config.py
+"""
+Configurazioni centralizzate per l'applicazione PV Simulator
+- CSS globale
+- Costanti fisiche
+- Parametri di default
+- Colori e stili
+- Messaggi di sistema
+"""
+
+# ===== CSS GLOBALE =====
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -26,23 +37,20 @@ section.main > div, section.main > div > div,
 [data-testid="stSidebar"] > div:first-child {
     display: flex !important;
     flex-direction: column;
-    align-items: stretch !important; /* forza i figli a occupare tutta la larghezza */
+    align-items: stretch !important;
     padding-top: 1rem !important;
     min-width: 200px !important;
     max-width: 380px !important;
 }
 
-/* Sidebar aperta/chiusa */
 [data-testid="stSidebar"][aria-expanded="true"] { width: 380px !important; transition: width 0.3s ease-in-out; }
 [data-testid="stSidebar"][aria-expanded="false"] { width: 200px !important; transition: width 0.3s ease-in-out; }
 
-/* Sidebar mobile */
 @media screen and (max-width: 768px) {
     [data-testid="stSidebar"][aria-expanded="true"] { width: 300px !important; }
     [data-testid="stSidebar"][aria-expanded="false"] { margin-left: -300px; transition: margin-left 0.3s ease-in-out; }
 }
 
-/* Tutti i figli della sidebar occupano tutta la larghezza */
 [data-testid="stSidebar"] > div:first-child > * {
     width: 100% !important;
     max-width: 100% !important;
@@ -108,7 +116,6 @@ section.main > div, section.main > div > div,
 }
 .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(116,166,91,0.4); }
 
-/* Pulsanti nella sidebar chiusa */
 [data-testid="stSidebar"][aria-expanded="false"] > div:first-child .stButton>button {
     max-width: 100% !important; min-width: 0 !important;
 }
@@ -126,7 +133,6 @@ a, a:visited, a:hover, a:active, .metric-card a { color: #74a65b !important; tex
 @media screen and (max-width: 768px) {
     [data-testid="stHorizontalBlock"] > div,
     [data-testid="column"] { flex: 1 1 100% !important; }
-    
     .metrics-grid { grid-template-columns: 1fr; gap: 1rem; }
     .metric-label { white-space: normal; }
 }
@@ -135,5 +141,67 @@ a, a:visited, a:hover, a:active, .metric-card a { color: #74a65b !important; tex
     .metric-label { white-space: normal; }
 }
 </style>
-
 """
+
+# ===== COSTANTI FISICHE =====
+TIMEZONE = "Europe/Rome"
+HECTARE_M2 = 10000  # 1 ettaro in m²
+
+# ===== PARAMETRI DEFAULT =====
+DEFAULT_PARAMS = {
+    "comune": "Roma",
+    "lat": 41.9,
+    "lon": 12.5,
+    "num_panels": 625,
+    "area": 1.6,  # m²
+    "altezza": 1.0,  # m
+    "pitch_laterale": 1.3,  # m
+    "pitch_file": 2.0,  # m
+    "tilt": 30,  # gradi
+    "azimuth": 0,  # gradi
+    "eff": 0.20,  # 20%
+    "noct": 45.0,  # °C
+    "temp_coeff": -0.004,  # %/°C
+    "losses": 0.10,  # 10%
+    "albedo": 0.2,
+}
+
+# ===== COLORI TEMA =====
+COLORS = {
+    "primary": "#74a65b",
+    "secondary": "#a3c68b",
+    "accent": "#f7e08e",
+    "warning": "#f39c12",
+    "danger": "#e74c3c",
+    "info": "#3498db",
+    "white": "#ffffff",
+    "text": "#000000",
+}
+
+# ===== DIMENSIONI GRAFICI =====
+CHART_CONFIG = {
+    "fig_height": 4,
+    "fig_width_min": 10,
+    "fig_width_max": 14,
+    "screen_width_fallback": 1200,
+    "map_height_mobile": 300,
+    "map_height_desktop": 400,
+}
+
+# ===== MESSAGGI DI SISTEMA =====
+MESSAGES = {
+    "location_not_found": "⚠️ Comune non trovato",
+    "location_success": "📌 {lat:.4f}°N, {lon:.4f}°E",
+    "surface_warning": "⚠️ La superficie totale ({superficie:.0f} m²) supera 1 ettaro. Riduci numero pannelli o aumenta distanze.",
+    "surface_exceed": "⚠️ La disposizione dei pannelli supera 1 ettaro! Superficie occupata: {superficie:.0f} m²",
+}
+
+# ===== LOGO SIDEBAR =====
+LOGO_URL = "http://www.resfarm.it/wp-content/uploads/2025/02/Logo_Resfarm_home_white.svg#121"
+
+# ===== CONFIGURAZIONE PAGINA STREAMLIT =====
+PAGE_CONFIG = {
+    "page_title": "Analisi Produzione Fotovoltaico",
+    "layout": "wide",
+    "initial_sidebar_state": "expanded",
+}
