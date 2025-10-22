@@ -124,7 +124,7 @@ def generate_metric_cards(params, results):
 def display_metrics(params, results):
     """Visualizza le metriche con layout responsivo"""
     
-    st.markdown('<p style="font-weight:600; font-size:1.1rem;">⚡ Risultati Produzione & Agro-FV</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">⚡ Risultati Produzione & Agro-FV</p>', unsafe_allow_html=True)
     
     metric_cards = generate_metric_cards(params, results)
     screen_width = get_screen_width()
