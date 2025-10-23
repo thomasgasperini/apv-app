@@ -107,8 +107,6 @@ def get_panel_parameters():
         "noct": noct,
     }
 
-
-
 def get_electrical_parameters():
     with st.sidebar.expander("⚡ Sistema elettrico", expanded=False):
         col1, col2 = st.columns(2)
