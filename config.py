@@ -152,10 +152,9 @@ DEFAULT_PARAMS = {
     "comune": "Roma",
     "lat": 41.9,
     "lon": 12.5,
-    "num_panels": 625,
-    "area": 1.6,  # m²
+    "num_panels": 1,
     "altezza": 1.0,  # m
-    "pitch_laterale": 1.3,  # m
+    "pitch_laterale": 1.0,  # m
     "pitch_file": 2.0,  # m
     "tilt": 30,  # gradi
     "azimuth": 0,  # gradi

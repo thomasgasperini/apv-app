@@ -8,7 +8,6 @@ Modulo per la generazione delle card metriche
 
 import streamlit as st
 
-
 def get_screen_width():
     """Rileva larghezza schermo per layout responsivo"""
     try:
@@ -17,9 +16,9 @@ def get_screen_width():
     except:
         return 1200  # fallback
 
-
-def create_metric_card(label, value, description):
-    """Crea una singola card metrica"""
+def create_metric_card(label, value, description, color=None):
+    """Crea una singola card metrica con colore opzionale"""
+    color_style = f"color:{color};" if color else ""
     return f"""
     <div class="metric-card" style="
         background:#f0f2f6;
@@ -29,11 +28,10 @@ def create_metric_card(label, value, description):
         text-align:center;
     ">
         <div class="metric-label" style="font-weight:600; font-size:0.9rem;">{label}</div>
-        <div class="metric-value" style="font-size:1.2rem; margin:0.2rem 0;">{value}</div>
+        <div class="metric-value" style="font-size:1.2rem; margin:0.2rem 0; {color_style}">{value}</div>
         <div class="metric-description" style="font-size:0.75rem; color:#555;">{description}</div>
     </div>
     """
-
 
 def generate_metric_cards(params, results):
     """Genera tutte le card metriche"""
@@ -53,11 +51,6 @@ def generate_metric_cards(params, results):
         
         # ⚡ Energia prodotta dai pannelli
         create_metric_card(
-            "⚡ Energia Giornaliera Pannelli",
-            f"{results['E_day']:.2f} kWh/ha",
-            "Energia elettrica generata dai pannelli (giornaliera)."
-        ),
-        create_metric_card(
             "⚡ Picco Potenza AC",
             f"{results['P_ac'].max():.0f} W",
             "Potenza massima istantanea dei pannelli."
@@ -67,7 +60,25 @@ def generate_metric_cards(params, results):
             f"{results['poa']['poa_global'].sum()/1000:.2f} kWh/m²",
             "Radiazione sul piano dei pannelli (tilt/azimuth)."
         ),
+        create_metric_card(
+            "⚡ Energia Giornaliera Pannelli",
+            f"{results['E_day']:.2f} kWh/ha",
+            "Energia elettrica generata dai pannelli (giornaliera)."
+        ),
         
+        # 📐 Parametri geometrici
+        create_metric_card(
+            "📐 Superficie Totale dei Pannelli",
+            f"{params['num_panels']*params['area']:.0f} m²",
+            "Area totale occupata dai pannelli installati."
+        ),
+        create_metric_card(
+            "📐 Land Area Coverage (GCR)",
+            f"{results['gcr']*100:.2f} %",
+            "Rapporto tra superficie pannelli e area totale sito.",
+            color="red" if results['gcr']*100 > 40 else None
+        ),
+
         # 🌱 Agro-FV
         create_metric_card(
             "🌱 Radiazione suolo",
@@ -79,66 +90,32 @@ def generate_metric_cards(params, results):
             f"{results['f_luce']*100:.1f} %",
             "Percentuale di terreno non ombreggiato dai pannelli."
         ),
-        
-        # 📐 Parametri geometrici
-        create_metric_card(
-            "📐 Numero Pannelli",
-            f"{results['num_panels']} / max {results['max_panels']}",
-            "Numero pannelli installati e massimo teorico per 1 ha."
-        ),
-        create_metric_card(
-            "📐 Superficie Pannelli",
-            f"{params['num_panels']*params['area']:.0f} m²",
-            "Superficie fisica dei pannelli installati."
-        ),
-        create_metric_card(
-            "📐 Superficie Effettiva Occupata",
-            f"{results['superficie_effettiva']:.0f} m²",
-            "Area complessiva inclusi spazi tra file."
-        ),
-        create_metric_card(
-            "📐 Land Area Coverage (GCR)",
-            f"{results['gcr']*100:.1f} %",
-            "Rapporto tra superficie pannelli e area totale sito."
-        ),
-        create_metric_card(
-            "📐 Pitch (Laterale / File)",
-            f"{params['pitch_laterale']:.2f} m / {params['pitch_file']:.2f} m",
-            "Distanza tra pannelli e tra file (centro-centro)."
-        ),
-        create_metric_card(
-            "📐 Tilt / Azimuth",
-            f"{params['tilt']}° / {params['azimuth']}°",
-            "Inclinazione e orientamento dei pannelli."
-        ),
-        create_metric_card(
-            "📐 Albedo / Perdite",
-            f"{params['albedo']:.2f} / {params['losses']*100:.1f} %",
-            "Riflettanza del terreno e perdite complessive impianto."
-        ),
     ]
-    
     return metric_cards
 
-
 def display_metrics(params, results):
-    """Visualizza le metriche con layout responsivo"""
+    """Visualizza le metriche con layout responsivo a 3 schede per riga"""
     
     st.markdown('<p class="section-header">⚡ Risultati Produzione & Agro-FV</p>', unsafe_allow_html=True)
     
     metric_cards = generate_metric_cards(params, results)
     screen_width = get_screen_width()
     
-    # Layout responsive
-    if screen_width > 1200:
-        cols = st.columns(5, gap="medium")
-        for i, card in enumerate(metric_cards):
-            cols[i % 5].markdown(card, unsafe_allow_html=True)
-    elif screen_width > 768:
-        cols = st.columns(2, gap="medium")
-        for i in range(0, len(metric_cards), 2):
-            for c, card in zip(cols, metric_cards[i:i+2]):
-                c.markdown(card, unsafe_allow_html=True)
+    cards_per_row = 3
+
+    # Desktop e tablet: 3 schede per riga
+    if screen_width > 768:
+        for i in range(0, len(metric_cards), cards_per_row):
+            row_cards = metric_cards[i:i+cards_per_row]
+            # aggiungi card vuote se meno di 3
+            row_cards += [""] * (cards_per_row - len(row_cards))
+            cols = st.columns(cards_per_row, gap="medium")
+            for c, card in zip(cols, row_cards):
+                if card:
+                    c.markdown(card, unsafe_allow_html=True)
+
+    # Mobile: 1 scheda per riga
     else:
         for card in metric_cards:
             st.markdown(card, unsafe_allow_html=True)
+
