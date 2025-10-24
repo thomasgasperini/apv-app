@@ -1,23 +1,27 @@
-# metrics.py
 """
-Modulo per la generazione delle card metriche
-- Risultati energetici
-- Parametri geometrici
-- Indicatori Agro-FV
+Modulo per la generazione e visualizzazione delle card metriche
+Funzionalità:
+- Creazione card metriche individuali
+- Layout responsivo (3 card per riga su desktop, 1 su mobile)
+- Formattazione valori con unità di misura
+- Visualizzazione W/m² e Wh/m² per GHI, DNI e POA
 """
 
 import streamlit as st
 
-def get_screen_width():
-    """Rileva larghezza schermo per layout responsivo"""
+# ==================== UTILITY ====================
+
+def get_screen_width() -> int:
     try:
         from screeninfo import get_monitors
         return get_monitors()[0].width
     except:
-        return 1200  # fallback
+        return 1200
 
-def create_metric_card(label, value, description, color=None):
-    """Crea una singola card metrica con colore opzionale"""
+def format_value(value: float, unit: str = "", decimals: int = 0) -> str:
+    return f"{value:.{decimals}f} {unit}".strip()
+
+def create_metric_card(label: str, value: str, description: str, color: str = None) -> str:
     color_style = f"color:{color};" if color else ""
     return f"""
     <div class="metric-card" style="
@@ -27,172 +31,98 @@ def create_metric_card(label, value, description, color=None):
         border-radius:0.5rem;
         text-align:center;
     ">
-        <div class="metric-label" style="font-weight:600; font-size:0.9rem;">{label}</div>
-        <div class="metric-value" style="font-size:1.2rem; margin:0.2rem 0; {color_style}">{value}</div>
-        <div class="metric-description" style="font-size:0.75rem; color:#555;">{description}</div>
+        <div class="metric-label" style="font-weight:600; font-size:0.9rem;">
+            {label}
+        </div>
+        <div class="metric-value" style="font-size:1.2rem; margin:0.2rem 0; {color_style}">
+            {value}
+        </div>
+        <div class="metric-description" style="font-size:0.75rem; color:#555;">
+            {description}
+        </div>
     </div>
     """
 
-def generate_metric_cards(params, results):
-    """Genera tutte le card metriche"""
-    
-    # Calcola alcuni indicatori aggiuntivi
-    efficienza_sistema = (results['E_day'] / (results['poa']['poa_global'].sum()/1000 * results['gcr'] * 10000)) * 100 if results['poa']['poa_global'].sum() > 0 else 0
-    rapporto_energetico = results['E_suolo_tot_ha'] / results['clearsky']['ghi'].sum()/1000 * 100 if results['clearsky']['ghi'].sum() > 0 else 0
-    
-    metric_cards = [
-        # 🌞 Energia solare incidente
-        create_metric_card(
-            "🌞 GHI Totale",
-            f"{results['clearsky']['ghi'].sum()/1000:.2f} kWh/m²",
-            "Radiazione globale orizzontale sul sito, senza pannelli."
-        ),
-        create_metric_card(
-            "🌞 DNI Totale",
-            f"{results['clearsky']['dni'].sum()/1000:.2f} kWh/m²",
-            "Radiazione diretta perpendicolare ai raggi solari."
-        ),
-        
-        # ⚡ Energia prodotta dai pannelli
-        create_metric_card(
-            "⚡ Picco Potenza AC",
-            f"{results['P_ac'].max():.2f} kW",
-            "Potenza massima istantanea dei pannelli."
-        ),
-        create_metric_card(
-            "⚡ POA Totale",
-            f"{results['poa']['poa_global'].sum()/1000:.2f} kWh/m²",
-            "Radiazione sul piano dei pannelli (tilt/azimuth)."
-        ),
-        create_metric_card(
-            "⚡ Energia Giornaliera Pannelli",
-            f"{results['E_day']:.0f} kWh/ha",
-            "Energia elettrica generata dai pannelli (giornaliera)."
-        ),
-        create_metric_card(
-            "⚡ Efficienza Sistema",
-            f"{efficienza_sistema:.1f} %",
-            "Rendimento complessivo del sistema (energia prodotta/radiazione POA)."
-        ),
-        
-        # 📐 Parametri geometrici
-        create_metric_card(
-            "📐 Superficie Totale Pannelli",
-            f"{params['num_panels']*params['area']:.0f} m²",
-            "Area totale occupata dai pannelli installati."
-        ),
-        create_metric_card(
-            "📐 Land Area Coverage (GCR)",
-            f"{results['gcr']*100:.1f} %",
-            "Rapporto tra superficie pannelli e area totale sito.",
-            color="red" if results['gcr']*100 > 40 else "green"
-        ),
+# ==================== GENERAZIONE METRICHE ====================
 
-        # 🌱 Agro-FV - NUOVE CARD
+def generate_solar_metrics(results: dict) -> list:
+    """
+    Genera metriche di irradianza solare in W/m² (medio orario) e Wh/m² (cumulativo giornaliero)
+    """
+    ghi_w = results['GHI_Wm2'].mean()
+    dni_w = results['DNI_Wm2'].mean()
+    poa_w = results['POA_Wm2'].mean()
+    
+    ghi_wh = results['GHI_Whm2']
+    dni_wh = results['DNI_Whm2']
+    poa_wh = results['POA_Whm2']
+    
+    return [
+    create_metric_card(
+        "GHI",
+        f"{format_value(ghi_w, 'W/m²')}<br>{format_value(ghi_wh, 'Wh/m²')}",
+        "Radiazione globale orizzontale: media oraria e totale giornaliera."
+    ),
+    create_metric_card(
+        "DNI",
+        f"{format_value(dni_w, 'W/m²')}<br>{format_value(dni_wh, 'Wh/m²')}",
+        "Radiazione diretta normale: media oraria e totale giornaliera."
+    ),
+    create_metric_card(
+        "POA",
+        f"{format_value(poa_w, 'W/m²')}<br>{format_value(poa_wh, 'Wh/m²')}",
+        "Radiazione sul piano dei pannelli: media oraria e totale giornaliera."
+    ),
+    ]   
+
+
+
+def generate_geometric_metrics(results: dict) -> list:
+    superficie = results['superficie_effettiva']
+    gcr = results['gcr']
+    gcr_color = "red" if gcr > 0.4 else "green"
+    
+    return [
         create_metric_card(
-            "🌱 Radiazione Suolo (per ettaro)",
-            f"{results['E_suolo_tot_ha']:.0f} kWh/ha",
-            "Radiazione TOTALE che raggiunge il suolo sull'intero ettaro."
+            "Superficie Totale Pannelli",
+            format_value(superficie, "m²", decimals=0),
+            "Area complessiva dei pannelli installati."
         ),
         create_metric_card(
-            "🌱 Radiazione Suolo (per m²)",
-            f"{results['E_suolo'].sum()/1000:.1f} kWh/m²",
-            "Radiazione media sul terreno illuminato tra i pannelli."
+            "Land Area Coverage (GCR)",
+            format_value(gcr * 100, "%", decimals=1),
+            "Rapporto tra superficie pannelli e area totale del sito.",
+            color=gcr_color
         ),
-        create_metric_card(
-            "🌱 Frazione Suolo Illuminato Medio",
-            f"{results['f_luce'].mean()*100:.1f} %",
-            "Percentuale media di terreno non ombreggiato durante il giorno."
-        ),
-        create_metric_card(
-            "🌱 Rapporto Radiazione Suolo/GHI",
-            f"{rapporto_energetico:.1f} %",
-            "Percentuale di radiazione che raggiunge il suolo rispetto al GHI totale.",
-            color="orange" if rapporto_energetico < 50 else "green"
-        ),
-        create_metric_card(
-            "🌱 Ore di Luce Solare Utile",
-            f"{(results['f_luce'] > 0.1).sum():.0f} h",
-            "Numero di ore con illuminazione significativa del suolo (>10%)."
-        ),
-        create_metric_card(
-            "🌱 Picco Illuminazione Suolo",
-            f"{results['f_luce'].max()*100:.0f} %",
-            "Massima frazione di luce che raggiunge il suolo durante il giorno."
-        )
     ]
-    return metric_cards
 
-def display_metrics(params, results):
-    """Visualizza le metriche con layout responsivo a 3 schede per riga"""
-    
-    st.markdown('<p class="section-header">⚡ Risultati Produzione & Agro-FV</p>', unsafe_allow_html=True)
-    
+def generate_metric_cards(params: dict, results: dict) -> list:
+    solar_cards = generate_solar_metrics(results)
+    geometric_cards = generate_geometric_metrics(results)
+    return solar_cards + geometric_cards
+
+# ==================== LAYOUT ====================
+
+def display_metrics_grid(metric_cards: list, cards_per_row: int = 3):
+    for i in range(0, len(metric_cards), cards_per_row):
+        row_cards = metric_cards[i:i + cards_per_row]
+        while len(row_cards) < cards_per_row:
+            row_cards.append("")
+        cols = st.columns(cards_per_row, gap="medium")
+        for col, card_html in zip(cols, row_cards):
+            if card_html:
+                col.markdown(card_html, unsafe_allow_html=True)
+
+def display_metrics_single_column(metric_cards: list):
+    for card in metric_cards:
+        st.markdown(card, unsafe_allow_html=True)
+
+def display_metrics(params: dict, results: dict):
+    st.markdown('<p class="section-header">OUTPUT</p>', unsafe_allow_html=True)
     metric_cards = generate_metric_cards(params, results)
+    
     screen_width = get_screen_width()
-    
-    cards_per_row = 3
-
-    # Desktop e tablet: 3 schede per riga
     if screen_width > 768:
-        for i in range(0, len(metric_cards), cards_per_row):
-            row_cards = metric_cards[i:i+cards_per_row]
-            # aggiungi card vuote se meno di 3
-            row_cards += [""] * (cards_per_row - len(row_cards))
-            cols = st.columns(cards_per_row, gap="medium")
-            for c, card in zip(cols, row_cards):
-                if card:
-                    c.markdown(card, unsafe_allow_html=True)
-
-    # Mobile: 1 scheda per riga
+        display_metrics_grid(metric_cards, cards_per_row=3)
     else:
-        for card in metric_cards:
-            st.markdown(card, unsafe_allow_html=True)
-
-def display_energy_comparison(results):
-    """Visualizza un confronto diretto tra energia prodotta e radiazione al suolo"""
-    
-    st.markdown("---")
-    st.markdown("### 📊 Confronto Energetico per Ettaro")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric(
-            label="🌞 Energia Solare Totale",
-            value=f"{results['clearsky']['ghi'].sum()/1000 * 10000:.0f} kWh/ha",
-            help="Radiazione che arriverebbe sull'ettaro senza pannelli"
-        )
-    
-    with col2:
-        st.metric(
-            label="⚡ Energia Prodotta Pannelli",
-            value=f"{results['E_day']:.0f} kWh/ha",
-            help="Energia elettrica generata dai pannelli"
-        )
-    
-    with col3:
-        st.metric(
-            label="🌱 Energia che Raggiunge il Suolo",
-            value=f"{results['E_suolo_tot_ha']:.0f} kWh/ha",
-            help="Radiazione disponibile per le coltivazioni sotto i pannelli"
-        )
-    
-    # Calcolo efficienza di utilizzo del terreno
-    energia_totale_utilizzata = results['E_day'] + results['E_suolo_tot_ha']
-    energia_solare_totale = results['clearsky']['ghi'].sum()/1000 * 10000
-    
-    if energia_solare_totale > 0:
-        efficienza_terreno = (energia_totale_utilizzata / energia_solare_totale) * 100
-        
-        st.info(f"""
-        **Efficienza di utilizzo del terreno: {efficienza_terreno:.1f}%**
-        
-        - ⚡ Energia elettrica prodotta: **{results['E_day']:.0f} kWh/ha** ({results['E_day']/energia_totale_utilizzata*100:.1f}%)
-        - 🌱 Energia per coltivazioni: **{results['E_suolo_tot_ha']:.0f} kWh/ha** ({results['E_suolo_tot_ha']/energia_totale_utilizzata*100:.1f}%)
-        
-        *L'Agro-FV permette di utilizzare contemporaneamente la radiazione solare per produzione energetica e agricola.*
-        """)
-
-# Nel tuo main app, dopo display_metrics, aggiungi:
-# display_energy_comparison(results)    
+        display_metrics_single_column(metric_cards)
