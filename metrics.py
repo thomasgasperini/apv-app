@@ -104,20 +104,40 @@ def generate_metric_cards(results: dict) -> list:
 
 def display_metrics(results: dict):
     """Visualizza le metriche in Streamlit con layout responsivo."""
-    metric_cards = generate_metric_cards(results)
-    screen_width = get_screen_width()
 
+    # --- Titolo senza seconda linea ---
+    st.markdown(
+        '<p class="section-header">Risultati irradiamento e produzione energetica</p>',
+        unsafe_allow_html=True
+    )
+
+    metric_cards_solar = generate_solar_metrics(results)
+    metric_cards_geom = generate_geometric_metrics(results)
+
+    # Display metriche solari
+    display_card_group(metric_cards_solar)
+
+    # --- Titolo senza seconda linea ---
+    st.markdown(
+        '<p class="section-header">Risultati spaziali</p>',
+        unsafe_allow_html=True
+    )
+
+    # Display metriche geometriche
+    display_card_group(metric_cards_geom)
+
+def display_card_group(cards: list):
+    """Funzione helper per disporre le card con layout responsivo."""
+    screen_width = get_screen_width()
     if screen_width > 768:
-        # Layout desktop: 3 card per riga
-        for i in range(0, len(metric_cards), 3):
-            row_cards = metric_cards[i:i+3]
+        for i in range(0, len(cards), 3):
+            row_cards = cards[i:i+3]
             while len(row_cards) < 3:
-                row_cards.append("")  # riempi eventuali slot vuoti
+                row_cards.append("")
             cols = st.columns(3, gap="medium")
             for col, card in zip(cols, row_cards):
                 if card:
                     col.markdown(card, unsafe_allow_html=True)
     else:
-        # Layout mobile: 1 card per riga
-        for card in metric_cards:
+        for card in cards:
             st.markdown(card, unsafe_allow_html=True)

@@ -47,6 +47,7 @@ def get_input_info() -> str:
 
 def show_pv_guide():
     with st.expander("Guida Completa Fotovoltaico", expanded=False):
+        
 
         # Header
         st.markdown(get_header_content(), unsafe_allow_html=True)

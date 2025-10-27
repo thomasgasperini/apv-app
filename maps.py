@@ -169,3 +169,4 @@ def display_map_section(params: dict):
     with col_info:
         info_box_html = create_info_box_html(params, map_height)
         st.markdown(info_box_html, unsafe_allow_html=True)
+
