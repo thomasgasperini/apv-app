@@ -2,8 +2,9 @@
 Modulo per calcoli fotovoltaici
 Funzionalità:
 - Calcolo posizione solare
-- Calcolo irradianza (GHI, DNI, DHI, POA)
+- Calcolo irradianza (GHI, DNI, DHI, POA globale)
 - Calcolo parametri geometrici (superficie, GCR)
+- Calcolo produzione elettrica dei pannelli
 """
 
 import pandas as pd
@@ -17,16 +18,7 @@ def calculate_panel_area(base: float, altezza: float) -> float:
     return base * altezza
 
 def calculate_coverage(num_panels: int, panel_area: float) -> tuple[float, float]:
-    """
-    Calcola superficie effettiva occupata e fattore di copertura (GCR).
-    
-    Args:
-        num_panels: numero pannelli installati
-        panel_area: area singolo pannello [m²]
-    
-    Returns:
-        tuple: (superficie_effettiva [m²], gcr [0-1])
-    """
+    """Calcola superficie effettiva e GCR"""
     superficie_effettiva = num_panels * panel_area
     gcr = superficie_effettiva / HECTARE_M2
     return superficie_effettiva, gcr
@@ -34,18 +26,16 @@ def calculate_coverage(num_panels: int, panel_area: float) -> tuple[float, float
 # ==================== CALCOLI SOLARI ====================
 
 def calculate_solar_position(times: pd.DatetimeIndex, lat: float, lon: float) -> pd.DataFrame:
-    """Calcola posizione solare (zenith, azimuth) per timeline specificata."""
     return pvlib.solarposition.get_solarposition(times, lat, lon)
 
 def calculate_clearsky_irradiance(times: pd.DatetimeIndex, lat: float, lon: float, timezone: str) -> pd.DataFrame:
-    """Calcola irradianza in condizioni di cielo sereno (ghi, dni, dhi)."""
     site = pvlib.location.Location(lat, lon, tz=timezone)
     return site.get_clearsky(times, model="ineichen")
 
-def calculate_poa_irradiance(clearsky: pd.DataFrame, solpos: pd.DataFrame,
-                             tilt: float, azimuth: float, albedo: float) -> pd.DataFrame:
-    """Calcola irradianza totale sul piano del modulo (POA)."""
-    return pvlib.irradiance.get_total_irradiance(
+def calculate_poa_global(clearsky: pd.DataFrame, solpos: pd.DataFrame,
+                         tilt: float, azimuth: float, albedo: float) -> pd.Series:
+    """Calcola POA globale [W/m²] sul piano dei pannelli"""
+    poa = pvlib.irradiance.get_total_irradiance(
         surface_tilt=tilt,
         surface_azimuth=azimuth,
         dni=clearsky['dni'],
@@ -55,51 +45,116 @@ def calculate_poa_irradiance(clearsky: pd.DataFrame, solpos: pd.DataFrame,
         solar_azimuth=solpos['azimuth'],
         albedo=albedo
     )
+    return poa['poa_global'].round(0).astype(int)
 
-# ==================== FUNZIONE PRINCIPALE ====================
+# ==================== CALCOLO PV BASE ====================
 
 def calculate_pv_basic(params: dict) -> dict:
-    """
-    Calcola tutti i parametri PV in W/m² e Wh/m² (giornalieri),
-    con valori arrotondati a interi.
-    """
-    # Timeline oraria
+    """Calcola GHI, DNI, DHI, POA globale [W/m²] e Wh/m² giornalieri"""
     times = pd.date_range(
         start=pd.Timestamp(params["data"]),
         end=pd.Timestamp(params["data"]) + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
         freq="1h",
         tz=params["timezone"]
     )
-    
-    # Superficie e GCR
+
     superficie_effettiva, gcr = calculate_coverage(params["num_panels"], params["area"])
-    
-    # Posizione solare e irradianza clearsky
+
     solpos = calculate_solar_position(times, params["lat"], params["lon"])
     clearsky = calculate_clearsky_irradiance(times, params["lat"], params["lon"], params["timezone"])
-    
-    # POA
-    poa = calculate_poa_irradiance(
-        clearsky, solpos,
-        params["tilt_pannello"],
-        params["azimuth_pannello"],
-        params["albedo"]
-    )
-    
-    # Arrotondamento a interi
-    ghi_int = clearsky['ghi'].round(0).astype(int)
-    dni_int = clearsky['dni'].round(0).astype(int)
-    poa_int = poa['poa_global'].round(0).astype(int)
-    
-    # Valori giornalieri cumulativi (Wh/m²)
+
+    poa_global = calculate_poa_global(clearsky, solpos, params["tilt_pannello"], params["azimuth_pannello"], params["albedo"])
+
     return {
         "times": times,
-        "GHI_Wm2": ghi_int,
-        "DNI_Wm2": dni_int,
-        "POA_Wm2": poa_int,
-        "GHI_Whm2": ghi_int.sum(),
-        "DNI_Whm2": dni_int.sum(),
-        "POA_Whm2": poa_int.sum(),
+        "GHI_Wm2": clearsky['ghi'].round(0).astype(int),
+        "DNI_Wm2": clearsky['dni'].round(0).astype(int),
+        "DHI_Wm2": clearsky['dhi'].round(0).astype(int),
+        "POA_global_Wm2": poa_global,
+        "GHI_Whm2": clearsky['ghi'].sum().round(0).astype(int),
+        "DNI_Whm2": clearsky['dni'].sum().round(0).astype(int),
+        "DHI_Whm2": clearsky['dhi'].sum().round(0).astype(int),
+        "POA_Whm2": poa_global.sum().round(0).astype(int),
         "superficie_effettiva": superficie_effettiva,
         "gcr": gcr
     }
+
+# ==================== CALCOLO PRODUZIONE ELETTRICA ====================
+
+def calculate_pv_production(params: dict, poa_global: pd.Series) -> dict:
+    """Calcola produzione elettrica istantanea [W] e giornaliera [Wh]"""
+    T_cell = 25 + (poa_global / 800) * (params["noct"] - 20)
+    eff_corr = params["eff"] * (1 + params["temp_coeff"] * (T_cell - 25))
+
+    P_inst = poa_global * params["area"] * params["num_panels"] * eff_corr * (1 - params["losses"])
+    P_inst = P_inst.round(0).astype(int)
+    E_day = P_inst.sum()
+
+    return {
+        "PV_power_W": P_inst,
+        "PV_energy_Wh": E_day
+    }
+
+# ==================== FUNZIONE TUTTI I CALCOLI ====================
+
+def calculate_all_pv(params: dict) -> dict:
+    """
+    Calcola tutti i parametri fotovoltaici principali per un giorno:
+
+    Parametri:
+        params (dict): dizionario contenente tutti i parametri di input
+                       (geometria pannelli, sistema elettrico, lat/lon, data, ecc.)
+
+    Restituisce:
+        dict: {
+            times: DatetimeIndex,
+            GHI_Wm2, DNI_Wm2, DHI_Wm2: irradiance istantanea [W/m²],
+            POA_global_Wm2: POA sul piano dei pannelli [W/m²],
+            GHI_Whm2, DNI_Whm2, DHI_Whm2, POA_Whm2: energia giornaliera [Wh/m²],
+            superficie_effettiva: superficie totale pannelli [m²],
+            gcr: Ground Coverage Ratio,
+            PV_power_W: potenza istantanea [W],
+            PV_energy_Wh: energia giornaliera [Wh]
+        }
+    """
+    # ------------------- 1. Calcolo base PV -------------------
+    times = pd.date_range(
+        start=pd.Timestamp(params["data"]),
+        end=pd.Timestamp(params["data"]) + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
+        freq="1h",
+        tz=params["timezone"]
+    )
+
+    # Superficie effettiva e GCR
+    superficie_effettiva, gcr = calculate_coverage(params["num_panels"], params["area"])
+
+    # Posizione solare e irradianza clearsky
+    solpos = calculate_solar_position(times, params["lat"], params["lon"])
+    clearsky = calculate_clearsky_irradiance(times, params["lat"], params["lon"], params["timezone"])
+
+    # POA globale sul piano dei pannelli
+    poa_global = calculate_poa_global(
+        clearsky, solpos, params["tilt_pannello"], params["azimuth_pannello"], params["albedo"]
+    )
+
+    # ------------------- 2. Calcolo produzione elettrica -------------------
+    production = calculate_pv_production(params, poa_global)
+
+    # ------------------- 3. Preparazione risultato -------------------
+    results = {
+        "times": times,
+        "GHI_Wm2": clearsky['ghi'].round(0).astype(int),
+        "DNI_Wm2": clearsky['dni'].round(0).astype(int),
+        "DHI_Wm2": clearsky['dhi'].round(0).astype(int),
+        "POA_global_Wm2": poa_global,
+        "GHI_Whm2": clearsky['ghi'].sum().round(0).astype(int),
+        "DNI_Whm2": clearsky['dni'].sum().round(0).astype(int),
+        "DHI_Whm2": clearsky['dhi'].sum().round(0).astype(int),
+        "POA_Whm2": poa_global.sum().round(0).astype(int),
+        "superficie_effettiva": superficie_effettiva,
+        "gcr": gcr,
+        "PV_power_W": production["PV_power_W"],
+        "PV_energy_Wh": production["PV_energy_Wh"]
+    }
+
+    return results

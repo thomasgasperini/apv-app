@@ -3,45 +3,50 @@ import streamlit as st
 # ==================== CONTENUTI GUIDA ====================
 
 def get_header_content() -> str:
-    return """
-    <div style="text-align:center; margin-top:-20px; margin-bottom:10px;">
-        <h1 style="color:#2E86C1;">Analisi Produzione Fotovoltaico</h1>
-        <p style="font-size:17px; color:#555;">
-            Simulazione dei parametri solari e geometrici per impianti fotovoltaici
+    return r"""
+    <div style="text-align:center; margin-top:-10px; margin-bottom:20px;">
+        <h1 style="color:#1F618D; font-weight:700;">Guida Avanzata al Calcolo Fotovoltaico</h1>
+        <p style="font-size:16px; color:#555; line-height:1.5;">
+            Simulazione completa dei parametri solari, geometrici e di produzione per impianti fotovoltaici.
         </p>
     </div>
     """
 
 def get_introduction_text() -> str:
-    return """
-    ## Guida ai Parametri Fotovoltaici
+    return r"""
+    ## Introduzione alla Simulazione Fotovoltaica
     
-    Questa guida mostra i parametri di input, i calcoli PV e i principali output,
-    con codice e formule matematiche, chiarendo da dove derivano le variabili e il loro significato fisico.
+    Questa guida illustra i passaggi fondamentali per stimare la produzione di un impianto fotovoltaico, 
+    partendo dai **parametri geometrici e ambientali**, passando per i **modelli di irraggiamento solare**, 
+    fino alla **stima della produzione elettrica giornaliera**.
+    
+    Verranno presentati sia i **concetti teorici** che la **loro implementazione in Python**, sfruttando 
+    la libreria `pvlib`.
     """
 
 def get_input_info() -> str:
-    return """
-    ### Parametri di INPUT (inseriti dall'utente)
+    return r"""
+    ### Parametri di Input
     
-    - Numero pannelli / ha  (`num_panels`)
-    - Lato minore e maggiore pannello [m]  (`base`, `altezza_pannello`)
-    - Altezza dal suolo [m]  (`altezza`)
-    - Tilt pannello [°]  (`tilt_pannello`)
-    - Azimuth pannello [°]  (`azimuth_pannello`)
-    - Efficienza [%]  (`eff`)
-    - Coefficiente temperatura [%/°C]  (`temp_coeff`)
-    - NOCT [°C]  (`noct`)
-    - Perdite sistema [%]  (`losses`)
-    - Albedo [0–1]  (`albedo`)
-    - Data simulazione  (`data`)
-    - Localizzazione geografica  (`lat`, `lon`)
+    I principali dati richiesti per la simulazione sono:
+    
+    - **Numero pannelli per ha** (`num_panels`)
+    - **Dimensioni pannello [m]**: base (`base`), altezza (`altezza_pannello`)
+    - **Altezza dal suolo [m]** (`altezza`)
+    - **Tilt e azimuth pannello [°]** (`tilt_pannello`, `azimuth_pannello`)
+    - **Efficienza modulo [%]** (`eff`)
+    - **Coefficiente di temperatura [%/°C]** (`temp_coeff`)
+    - **NOCT [°C]** (`noct`)
+    - **Perdite di sistema [%]** (`losses`)
+    - **Albedo del terreno [0–1]** (`albedo`)
+    - **Data simulazione** (`data`)
+    - **Coordinate geografiche** (`lat`, `lon`)
     """
 
 # ==================== FUNZIONE PRINCIPALE ====================
 
 def show_pv_guide():
-    with st.expander("Guida completa Fotovoltaico", expanded=True):
+    with st.expander("Guida Completa Fotovoltaico", expanded=False):
 
         # Header
         st.markdown(get_header_content(), unsafe_allow_html=True)
@@ -51,142 +56,123 @@ def show_pv_guide():
         st.markdown(get_input_info())
         st.markdown("---")
 
-        # ==================== OUTPUT ====================
-        st.markdown("### Parametri di OUTPUT (con codice e formule)")
-
-        # --- Superficie Totale Pannelli ---
-        st.markdown("**Superficie Totale Pannelli [m²]**")
-        st.markdown("Area totale occupata dai pannelli: numero pannelli × area singolo pannello.")
-        st.code("""
-# num_panels, base, altezza_pannello = input utente
-panel_area = base * altezza_pannello
-superficie_totale = num_panels * panel_area
-""", language="python")
-        st.latex(r"A_{totale} = N_{pannelli} \times A_{pannello}")
+        # ==================== CALCOLI GEOMETRICI ====================
+        st.markdown("## 1. Calcoli Geometrici")
+        
+        # --- Superficie totale pannelli ---
+        st.markdown("### 1.1 Superficie Totale Pannelli [m²]")
+        st.markdown("L'**area totale dei pannelli** si calcola con le seguenti formule:")
+        st.latex(r"""
+        A_{\text{pannello}} = \text{base} \times \text{altezza} \\
+        A_{\text{totale}} = N_{\text{pannelli}} \times A_{\text{pannello}}
+        """)
+        st.code("""panel_area = base * altezza_pannello
+superficie_totale = num_panels * panel_area""", language="python")
 
         # --- Land Area Coverage (GCR) ---
-        st.markdown("**Land Area Coverage (GCR) [%]**")
-        st.markdown("Percentuale della superficie del terreno effettivamente coperta dai pannelli.")
-        st.code("""
-# HECTARE_M2 = 10_000 m² (1 ettaro)
-superficie_effettiva, gcr = calculate_coverage(num_panels, panel_area)
-gcr = superficie_effettiva / HECTARE_M2
-""", language="python")
-        st.latex(r"GCR = \frac{A_{totale}}{A_{terreno}}")
+        st.markdown("### 1.2 Land Area Coverage (GCR) [%]")
+        st.markdown("Il **GCR** rappresenta la frazione di terreno coperta dai pannelli:")
+        st.latex(r"""
+        GCR = \frac{A_{\text{totale}}}{A_{\text{terreno}}}, \quad
+        A_{\text{terreno}} = 10.000\,\text{m² per ha}
+        """)
+        st.code("""superficie_effettiva, gcr = calculate_coverage(num_panels, panel_area)
+gcr = superficie_effettiva / HECTARE_M2""", language="python")
+        st.markdown("---")
+
+        # ==================== CALCOLI SOLARI ====================
+        st.markdown("## 2. Calcoli Solari (Irradianza)")
 
         # --- GHI ---
-        st.markdown("**GHI – Global Horizontal Irradiance [W/m²]**")
-        st.markdown("""
-È la **radiazione solare totale ricevuta su una superficie orizzontale**.  
-Comprende due componenti:
-- **Diretta (DNI)**: proveniente direttamente dal disco solare.  
-- **Diffusa (DHI)**: dovuta alla dispersione atmosferica e alla riflessione delle nuvole.
-""")
+        st.markdown("### 2.1 GHI – Global Horizontal Irradiance [W/m²]")
+        st.markdown("La GHI rappresenta la **radiazione totale su un piano orizzontale**:")
         st.latex(r"\text{GHI} = \text{DNI} \cdot \cos(\theta_z) + \text{DHI}")
-        st.markdown("""
-Dove:
-- \\(\\theta_z\\) è l'angolo zenitale solare.
-- La **GHI** rappresenta la quantità totale di energia solare disponibile su un piano orizzontale (ad esempio, il suolo).
-""")
 
         # --- DNI ---
-        st.markdown("**DNI – Direct Normal Irradiance [W/m²]**")
-        st.markdown("""
-È la **radiazione solare diretta per unità di superficie perpendicolare ai raggi solari**.  
-Si misura su un piano normale alla direzione del Sole.
-""")
+        st.markdown("### 2.2 DNI – Direct Normal Irradiance [W/m²]")
+        st.markdown("Radiazione solare diretta misurata perpendicolarmente ai raggi solari:")
         st.latex(r"\text{DNI} = \frac{\text{GHI} - \text{DHI}}{\cos(\theta_z)}")
 
         # --- DHI ---
-        st.markdown("**DHI – Diffuse Horizontal Irradiance [W/m²]**")
-        st.markdown("""
-È la **radiazione solare diffusa che arriva da tutto il cielo**, eccetto il disco solare.  
-Proviene dalla dispersione della luce nell’atmosfera ed è sempre presente, anche con cielo coperto.
-""")
+        st.markdown("### 2.3 DHI – Diffuse Horizontal Irradiance [W/m²]")
+        st.markdown("Componente diffusa della radiazione proveniente da tutto il cielo eccetto il sole:")
         st.latex(r"\text{DHI} = \text{GHI} - \text{DNI} \cdot \cos(\theta_z)")
 
         # --- POA ---
-        st.markdown("**POA – Plane of Array Irradiance [W/m²]**")
-        st.markdown("""
-È la **radiazione solare totale ricevuta sul piano del modulo fotovoltaico**, inclinato e orientato secondo tilt e azimuth.
-Comprende tre contributi:
-- Diretto proiettato sul piano del modulo  
-- Diffuso del cielo  
-- Riflesso dal suolo (in funzione dell’albedo)
-""")
-        st.latex(r"\text{POA} = \text{DNI} \cdot \cos(\theta_i) + \text{DHI} + \text{GHI} \cdot \text{albedo}")
-        st.markdown("""
-Dove:
-- \\(\\theta_i\\) è l’angolo di incidenza tra il raggio solare e la normale al pannello.  
-- L’albedo rappresenta la frazione di luce riflessa dal suolo (es. 0.2 per terreno erboso, 0.8 per neve).
-""")
+        st.markdown("### 2.4 POA – Plane of Array Irradiance [W/m²]")
+        st.markdown("Radiazione incidente sul piano inclinato del modulo:")
+        st.latex(r"""
+        \text{POA} = \text{DNI} \cdot \cos(\theta_i) + \text{DHI} + \text{GHI} \cdot \text{albedo} \\
+        \theta_i = \text{angolo di incidenza sul pannello}
+        """)
 
         st.markdown("---")
 
         # ==================== IMPLEMENTAZIONE CODICE ====================
-        st.markdown("### Implementazione dei calcoli con `pvlib`")
-
-        st.code("""
-import pvlib
+        st.markdown("## 3. Implementazione Python con `pvlib`")
+        st.markdown("Passaggi principali:")
+        st.markdown("""
+        1. Creazione della timeline oraria
+        2. Calcolo posizione solare (`pvlib.solarposition`)
+        3. Stima radiazione cielo sereno (Ineichen)
+        4. Calcolo radiazione sul piano moduli (POA)
+        """)
+        st.code("""import pvlib
 import pandas as pd
 
-# Timeline oraria della giornata
-times = pd.date_range(
-    start=data,
-    end=data + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
-    freq="1h",
-    tz=timezone
-)
+times = pd.date_range(start=data,
+                      end=data + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
+                      freq='1h', tz=timezone)
 
-# Posizione solare
-solpos = pvlib.solarposition.get_solarposition(times, lat, lon)
-
-# Irradianza in cielo sereno (modello Ineichen)
 site = pvlib.location.Location(lat, lon, tz=timezone)
-clearsky = site.get_clearsky(times, model="ineichen")
+solpos = pvlib.solarposition.get_solarposition(times, lat, lon)
+clearsky = site.get_clearsky(times, model='ineichen')
 
-# Estrazione valori
-df_ghi = clearsky['ghi']   # Global Horizontal Irradiance [W/m²]
-df_dni = clearsky['dni']   # Direct Normal Irradiance [W/m²]
-df_dhi = clearsky['dhi']   # Diffuse Horizontal Irradiance [W/m²]
-
-# Irradianza sul piano del modulo (POA)
 poa = pvlib.irradiance.get_total_irradiance(
     surface_tilt=tilt_pannello,
     surface_azimuth=azimuth_pannello,
-    dni=df_dni,
-    ghi=df_ghi,
-    dhi=df_dhi,
+    dni=clearsky['dni'],
+    ghi=clearsky['ghi'],
+    dhi=clearsky['dhi'],
     solar_zenith=solpos['zenith'],
     solar_azimuth=solpos['azimuth'],
     albedo=albedo
 )
 
-POA_medio = poa['poa_global'].mean()
-""", language="python")
+POA_medio = poa['poa_global'].mean()""", language="python")
 
-        st.markdown("""
-Il calcolo **POA** combina automaticamente le tre componenti (diretta, diffusa e riflessa)
-in funzione della geometria del pannello e delle condizioni solari.
-""")
+        st.markdown("---")
+
+        # ==================== PRODUZIONE ELETTRICA ====================
+        st.markdown("## 4. Calcolo Produzione Elettrica")
+        st.markdown("La potenza istantanea del modulo si calcola come:")
+        st.latex(r"""
+        P_{\text{inst}} = POA \cdot A_{\text{totale}} \cdot \eta_{\text{corr}} \cdot (1 - \text{losses}) \\
+        \eta_{\text{corr}} = \eta \cdot \left[1 + \text{temp\_coeff} \cdot (T_{\text{cell}} - 25)\right] \\
+        T_{\text{cell}} = 25 + \frac{POA}{800} \cdot (NOCT - 20)
+        """)
+        st.code("""T_cell = 25 + (poa_global / 800) * (noct - 20)
+eff_corr = eff * (1 + temp_coeff * (T_cell - 25))
+P_inst = poa_global * area * num_panels * eff_corr * (1 - losses)
+E_day = P_inst.sum()""", language="python")
 
         st.markdown("---")
 
         # ==================== NOTE FINALI ====================
-        st.markdown("### Note importanti")
+        st.markdown("## 5. Note Finali")
         st.markdown("""
-- La simulazione utilizza il modello *Ineichen* per il cielo sereno, implementato in `pvlib`.  
-- Tutti i valori (GHI, DNI, DHI, POA) sono riferiti a 1 m² di superficie.  
-- I valori giornalieri si ottengono sommando o mediando quelli orari.  
-- GCR e superficie derivano esclusivamente dai parametri geometrici dei pannelli.
-""")
+        - Tutti i valori di irradiamento (GHI, DNI, DHI, POA) sono riferiti a **1 m²**.
+        - I valori giornalieri si ottengono **sommando o mediando** quelli orari.
+        - Il modello di cielo sereno utilizzato è **Ineichen** (`pvlib`).
+        - La superficie e il GCR derivano esclusivamente dai parametri geometrici dei pannelli.
+        """)
 
         # ==================== BIBLIOGRAFIA ====================
-        st.markdown("### Bibliografia e Riferimenti")
+        st.markdown("## Bibliografia e Riferimenti")
         st.markdown("""
-1. Duffie, J.A., Beckman, W.A. *Solar Engineering of Thermal Processes*, 4th Edition, Wiley, 2013.  
-2. PVLib Python Documentation – [https://pvlib-python.readthedocs.io](https://pvlib-python.readthedocs.io)  
-3. Ineichen, P. *A broadband simplified version of the Solis clear sky model*, Solar Energy, 2008.  
-4. Perez, R., Seals, R., Ineichen, P., *Modeling Daylight Availability and Irradiance Components from Direct and Global Irradiance*, Solar Energy, 1990.  
-5. IEA PVPS, *Trends in Photovoltaic Applications*, International Energy Agency.
-""")
+        1. Duffie, J.A., Beckman, W.A., *Solar Engineering of Thermal Processes*, 4th Ed., Wiley, 2013.
+        2. PVLib Python Documentation – [https://pvlib-python.readthedocs.io](https://pvlib-python.readthedocs.io)
+        3. Ineichen, P., *A broadband simplified version of the Solis clear sky model*, Solar Energy, 2008.
+        4. Perez, R., Seals, R., Ineichen, P., *Modeling Daylight Availability and Irradiance Components*, Solar Energy, 1990.
+        5. IEA PVPS, *Trends in Photovoltaic Applications*, International Energy Agency.
+        """)

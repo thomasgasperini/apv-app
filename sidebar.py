@@ -2,10 +2,10 @@
 Modulo per la gestione della sidebar con input utente
 Funzionalità:
 - Header con logo
-- Input localizzazione
-- Input data simulazione
+- Input localizzazione + data simulazione
 - Parametri pannello
 - Parametri sistema elettrico
+- Parametri aggiuntivi
 """
 
 from datetime import date
@@ -39,8 +39,7 @@ def display_sidebar_header():
     </div>
     """, unsafe_allow_html=True)
 
-
-# ==================== LOCALIZZAZIONE ====================
+# ==================== LOCALIZZAZIONE + DATA ====================
 
 def get_location_from_comune(comune: str) -> tuple:
     """Geocodifica comune italiano"""
@@ -53,10 +52,10 @@ def get_location_from_comune(comune: str) -> tuple:
         st.sidebar.error(f"Errore geocoding: {e}")
     return None, None, None
 
-
-def get_location_inputs() -> dict:
-    """Raccoglie input di localizzazione"""
-    with st.sidebar.expander("📍 Localizzazione", expanded=False):
+def get_location_and_date_inputs() -> dict:
+    """Raccoglie input di localizzazione e data simulazione in un unico expander"""
+    with st.sidebar.expander("🌍 Localizzazione e Data simulazione", expanded=False):
+        # ----- Localizzazione -----
         comune = st.text_input("Comune", value=DEFAULT_PARAMS["comune"])
         lat, lon, location = get_location_from_comune(comune)
 
@@ -68,31 +67,27 @@ def get_location_inputs() -> dict:
         else:
             st.success(MESSAGES["location_success"].format(lat=lat, lon=lon))
 
+        # ----- Data simulazione -----
+        data_simulazione = st.date_input("Seleziona data", value=date.today())
+
     return {
         "comune": comune,
         "lat": lat,
         "lon": lon,
         "timezone": TIMEZONE_OBJ,
-        "location": location
+        "location": location,
+        "data": data_simulazione
     }
-
-
-# ==================== DATA SIMULAZIONE ====================
-
-def get_date_input() -> date:
-    """Input data per la simulazione"""
-    with st.sidebar.expander("📅 Data simulazione", expanded=False):
-        return st.date_input("Seleziona data", value=date.today())
-
 
 # ==================== PARAMETRI PANNELLO ====================
 
 def get_panel_geometry() -> dict:
-    """Input parametri geometrici e elettrici del pannello"""
+    """Input parametri geometrici e elettrici del pannello (pvlib-friendly)"""
     with st.sidebar.expander("🔧 Parametri pannello", expanded=False):
         col1, col2 = st.columns(2)
 
         with col1:
+            # Numero pannelli e dimensioni
             num_panels = st.number_input(
                 "Numero pannelli / ha", 
                 value=DEFAULT_PARAMS["num_panels"], step=1, min_value=1
@@ -129,11 +124,23 @@ def get_panel_geometry() -> dict:
             )
 
         with col2:
-            tilt_pannello = st.slider("Tilt pannello [°]", 0, 90, DEFAULT_PARAMS["tilt"])
-            azimuth_pannello = st.slider("Azimuth pannello [°]", -180, 180, DEFAULT_PARAMS["azimuth"])
-            eff = st.number_input("Efficienza [%]", value=DEFAULT_PARAMS["eff"]*100, step=0.5, min_value=0.1, max_value=100.0) / 100
-            temp_coeff = st.number_input("Coeff. temperatura γ [%/°C]", value=DEFAULT_PARAMS["temp_coeff"]*100, step=0.1)/100
-            noct = st.number_input("NOCT [°C]", value=DEFAULT_PARAMS["noct"], step=1.0, min_value=20.0, max_value=60.0)
+            # Tilt e azimuth pvlib-friendly
+            tilt_pannello = st.slider("Tilt pannello (0°=orizzontale, 90°=verticale)", 0, 90, DEFAULT_PARAMS["tilt"])
+            azimuth_pannello = st.slider(
+                "Azimuth pannello (0°=Nord, 90°=Est, 180°=Sud, 270°=Ovest)",
+                0, 360, DEFAULT_PARAMS["azimuth"]
+            )
+
+            # Parametri elettrici
+            eff = st.number_input(
+                "Efficienza [%]", value=DEFAULT_PARAMS["eff"]*100, step=0.5, min_value=0.1, max_value=100.0
+            ) / 100
+            temp_coeff = st.number_input(
+                "Coeff. temperatura γ [%/°C]", value=DEFAULT_PARAMS["temp_coeff"]*100, step=0.1
+            ) / 100
+            noct = st.number_input(
+                "NOCT [°C]", value=DEFAULT_PARAMS["noct"], step=1.0, min_value=20.0, max_value=60.0
+            )
 
     return {
         "num_panels": num_panels,
@@ -147,7 +154,6 @@ def get_panel_geometry() -> dict:
         "temp_coeff": temp_coeff,
         "noct": noct,
     }
-
 
 # ==================== PARAMETRI SISTEMA ELETTRICO ====================
 
@@ -165,7 +171,6 @@ def get_electrical_parameters() -> dict:
             )
     return {"losses": losses, "albedo": albedo}
 
-
 # ==================== PARAMETRI AGGIUNTIVI ====================
 
 def get_additional_parameters() -> dict:
@@ -173,7 +178,6 @@ def get_additional_parameters() -> dict:
     with st.sidebar.expander("🧩 Parametri aggiuntivi", expanded=False):
         extra_param = st.number_input("Parametro extra", value=0.0, step=0.1)
     return {"extra_param": extra_param}
-
 
 # ==================== VALIDAZIONE ====================
 
@@ -200,23 +204,30 @@ def validate_and_display_status(panel_params: dict):
         "gcr": gcr
     }
 
-
 # ==================== FUNZIONE PRINCIPALE ====================
 
 def sidebar_inputs() -> dict:
     """Raccoglie tutti gli input dalla sidebar e li valida"""
     display_sidebar_header()
-    location_data = get_location_inputs()
-    data = get_date_input()
+
+    # Localizzazione + Data simulazione
+    location_data = get_location_and_date_inputs()
+
+    # Parametri pannello
     panel_params = get_panel_geometry()
+
+    # Parametri sistema elettrico
     electrical_params = get_electrical_parameters()
+
+    # Parametri aggiuntivi
     additional_params = get_additional_parameters()
+
+    # Validazione superficie e GCR
     validation_results = validate_and_display_status(panel_params)
 
     # Unione di tutti i parametri
     return {
         **location_data,
-        "data": data,
         **panel_params,
         **electrical_params,
         **additional_params,
