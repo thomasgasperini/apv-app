@@ -155,18 +155,18 @@ def display_map_section(params: dict):
         st.warning("⚠️ Località non disponibile. Inserire coordinate manualmente.")
         return
 
-    st.markdown('<p class="section-header">Resoconto INPUT</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Resoconto dati di INPUT</p>', unsafe_allow_html=True)
 
     screen_width = get_screen_width()
     map_height = get_map_height(screen_width)
 
-    col_map, col_info = st.columns([3, 1], gap="medium")
-
-    with col_map:
-        location_map = create_location_map(params["lat"], params["lon"], params["comune"])
-        st_folium(location_map, width="100%", height=map_height)
+    col_info, col_map = st.columns([3, 1], gap="medium")
 
     with col_info:
         info_box_html = create_info_box_html(params, map_height)
         st.markdown(info_box_html, unsafe_allow_html=True)
+
+    with col_map:
+        location_map = create_location_map(params["lat"], params["lon"], params["comune"])
+        st_folium(location_map, width="100%", height=map_height)
 

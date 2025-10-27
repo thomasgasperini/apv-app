@@ -5,9 +5,9 @@ import streamlit as st
 def get_header_content() -> str:
     return r"""
     <div style="text-align:center; margin-top:-10px; margin-bottom:20px;">
-        <h1 style="color:#1F618D; font-weight:700;">Guida Avanzata al Calcolo Fotovoltaico</h1>
+        <h1 style="color:#1F618D; font-weight:700;"> Guida Avanzata al Simulatore APV di RESFARM</h1>
         <p style="font-size:16px; color:#555; line-height:1.5;">
-            Simulazione completa dei parametri solari, geometrici e di produzione per impianti fotovoltaici.
+            Simulazione completa dei parametri solari, geometrici e di produzione per impianti APV.
         </p>
     </div>
     """
@@ -46,7 +46,7 @@ def get_input_info() -> str:
 # ==================== FUNZIONE PRINCIPALE ====================
 
 def show_pv_guide():
-    with st.expander("Guida Completa Fotovoltaico", expanded=False):
+    with st.expander("📖 Guida Completa", expanded=False):
         
 
         # Header

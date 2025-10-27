@@ -27,7 +27,7 @@ DEFAULT_PARAMS = {
     "pitch_laterale": 1.0,  # m
     "pitch_file": 2.0,  # m
     "tilt": 30,  # gradi
-    "azimuth": 0,  # gradi (Sud=0, Est=-90, Ovest=90)
+    "azimuth": 0, 
     
     # Caratteristiche elettriche
     "eff": 0.20,  # efficienza 20%
@@ -63,7 +63,7 @@ CHART_CONFIG = {
 # ==================== MESSAGGI UI ====================
 MESSAGES = {
     "location_not_found": "⚠️ Comune non trovato",
-    "location_success": "📌 {lat:.4f}°N, {lon:.4f}°E",
+    "location_success": "{lat:.4f}°N, {lon:.4f}°E",
     "surface_warning": "⚠️ La superficie totale ({superficie:.0f} m²) supera 1 ettaro.",
     "surface_exceed": "⚠️ La disposizione dei pannelli supera 1 ettaro! Superficie: {superficie:.0f} m²",
     "surface_valid": "✅ Input validi: {superficie:.0f} m² ({gcr:.2%} GCR)",

@@ -107,7 +107,7 @@ def display_metrics(results: dict):
 
     # --- Titolo senza seconda linea ---
     st.markdown(
-        '<p class="section-header">Risultati irradiamento e produzione energetica</p>',
+        '<p class="section-header" style="margin-top: 1rem;">Parametri di irradiamento solare e produzione energetica</p>',
         unsafe_allow_html=True
     )
 
@@ -117,9 +117,8 @@ def display_metrics(results: dict):
     # Display metriche solari
     display_card_group(metric_cards_solar)
 
-    # --- Titolo senza seconda linea ---
     st.markdown(
-        '<p class="section-header">Risultati spaziali</p>',
+        '<p class="section-header" style="margin-top: 1rem;">Geometria e copertura dei moduli</p>',
         unsafe_allow_html=True
     )
 

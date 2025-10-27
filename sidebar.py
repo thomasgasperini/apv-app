@@ -22,25 +22,29 @@ def display_sidebar_header():
     <div style="
         text-align:center;
         padding:1rem;
-        margin-bottom:2rem;
-        margin-top:-3rem;
+        margin-bottom:-1rem;
+        margin-top:-4rem;
         background: linear-gradient(135deg, #74a65b, #f9d71c);
         border-radius: 15px;
-        overflow: hidden;
         height: 240px;
     ">
         <img src="{LOGO_URL}" 
              style="
-                width:100%;
+                width:90%;
                 height:auto;
                 object-fit: cover;
                 object-position: center bottom;
              ">
+
     </div>
     """, unsafe_allow_html=True)
 
 # ==================== LOCALIZZAZIONE + DATA ====================
-
+    # ----- Intestazione -----
+    st.sidebar.markdown("""
+        <h3 style="text-align:left; margin-bottom:0rem; margin-top:-8">Input Dashboard</h3>
+    """, unsafe_allow_html=True)
+    
 def get_location_from_comune(comune: str) -> tuple:
     """Geocodifica comune italiano"""
     try:
@@ -125,10 +129,31 @@ def get_panel_geometry() -> dict:
 
         with col2:
             # Tilt e azimuth pvlib-friendly
-            tilt_pannello = st.slider("Tilt pannello (0°=orizzontale, 90°=verticale)", 0, 90, DEFAULT_PARAMS["tilt"])
+            tilt_pannello = st.slider(
+                "Tilt pannello [°]",
+                min_value=0,
+                max_value=90,
+                value=DEFAULT_PARAMS["tilt"],
+                help="0° = orizzontale, 90° = verticale"
+            )
+
             azimuth_pannello = st.slider(
-                "Azimuth pannello (0°=Nord, 90°=Est, 180°=Sud, 270°=Ovest)",
-                0, 360, DEFAULT_PARAMS["azimuth"]
+                "Azimuth pannello [°]",
+                min_value=0,
+                max_value=360,
+                value=DEFAULT_PARAMS["azimuth"],
+                help="""
+                Azimuth pannello (0–360°):
+
+                - 0° / 360° = Nord
+                - 45° = Nord-Est
+                - 90° = Est
+                - 135° = Sud-Est
+                - 180° = Sud
+                - 225° = Sud-Ovest
+                - 270° = Ovest
+                - 315° = Nord-Ovest
+                """
             )
 
             # Parametri elettrici
