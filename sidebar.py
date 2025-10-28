@@ -74,7 +74,7 @@ import time
 
 def get_location_from_comune(comune: str, max_retries: int = 10):
     """Tenta di ottenere lat/lon da Nominatim. Riprova alcune volte se fallisce."""
-    geolocator = Nominatim(user_agent="pv_calculator_pro", timeout=30)
+    geolocator = Nominatim(user_agent="pv_calculator_pro", timeout=15)
 
     for attempt in range(max_retries):
         try:
@@ -106,18 +106,18 @@ def get_location_and_date_inputs():
        
         st.success(f"📍 Coordinate: lat {lat:.4f}, lon {lon:.4f}")
     if lat is None or lon is None:
-            st.info("🌐 Nessuna connessione o località non trovata. Inserisci manualmente le coordinate (lat, lon).")
-            lat = st.number_input(
+        st.info("🌐 Nessuna connessione o località non trovata. Inserisci manualmente le coordinate (lat, lon).")
+        lat = st.number_input(
                     "Latitudine [°]", 
                     value=DEFAULT_PARAMS["lat"], 
                     format="%.4f"
                 )
-            lon = st.number_input(
+        lon = st.number_input(
                     "Longitudine [°]", 
                     value=DEFAULT_PARAMS["lon"], 
                     format="%.4f"
                 )
-            location = None
+        location = None
     return {
         "comune": comune,
         "lat": lat,
