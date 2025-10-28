@@ -118,7 +118,7 @@ def get_location_and_date_inputs():
         with col2:
             data_simulazione = st.date_input("📅 Seleziona data", value=date.today())
 
-        st.success(f"📍 Coordinate: lat={lat:.4f}, lon={lon:.4f}")
+        st.success(f"📍 Coordinate: lat {lat:.4f}, lon {lon:.4f}")
 
     return {
         "comune": comune,
