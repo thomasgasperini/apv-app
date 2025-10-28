@@ -160,7 +160,7 @@ def display_map_section(params: dict):
     screen_width = get_screen_width()
     map_height = get_map_height(screen_width)
 
-    col_info, col_map = st.columns([3, 1], gap="medium")
+    col_info, col_map = st.columns([2, 1], gap="medium")
 
     with col_info:
         info_box_html = create_info_box_html(params, map_height)

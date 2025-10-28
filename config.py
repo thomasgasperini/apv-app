@@ -63,7 +63,7 @@ CHART_CONFIG = {
 # ==================== MESSAGGI UI ====================
 MESSAGES = {
     "location_not_found": "⚠️ Comune non trovato",
-    "location_success": "{lat:.4f}°N, {lon:.4f}°E",
+    "location_success": "Coordinate: {lat:.4f} °N, {lon:.4f}°E",
     "surface_warning": "⚠️ La superficie totale ({superficie:.0f} m²) supera 1 ettaro.",
     "surface_exceed": "⚠️ La disposizione dei pannelli supera 1 ettaro! Superficie: {superficie:.0f} m²",
     "surface_valid": "✅ Input validi: {superficie:.0f} m² ({gcr:.2%} GCR)",
@@ -112,16 +112,16 @@ section.main > div, section.main > div > div,
     flex-direction: column;
     align-items: stretch !important;
     padding-top: 1rem !important;
-    min-width: 200px !important;
-    max-width: 380px !important;
+    min-width: 250px !important; /* aumentata per colonne affiancate */
+    max-width: 400px !important;
 }
 
 [data-testid="stSidebar"][aria-expanded="true"] { 
-    width: 380px !important; 
+    width: 400px !important; 
     transition: width 0.3s ease-in-out; 
 }
 [data-testid="stSidebar"][aria-expanded="false"] { 
-    width: 200px !important; 
+    width: 250px !important; 
     transition: width 0.3s ease-in-out; 
 }
 
@@ -133,10 +133,32 @@ section.main > div, section.main > div > div,
     }
 }
 
+/* ===== WIDGET SIDEBAR ===== */
 [data-testid="stSidebar"] > div:first-child > * {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+}
+
+/* ===== COLONNE AFFIANCATE NELLA SIDEBAR ===== */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
+[data-testid="stSidebar"] [data-testid="column"] {
+    flex: 1 1 30% !important;  /* due colonne affiancate */
+    min-width: 0 !important;   /* elimina min-width che forza il wrap verticale */
+    margin-right: 0.5rem !important; /* piccolo gap */
+}
+
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:last-child,
+[data-testid="stSidebar"] [data-testid="column"]:last-child {
+    margin-right: 0 !important;
+}
+
+/* ===== ADATTAMENTO MOBILE ===== */
+@media screen and (max-width: 480px) {
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
+    [data-testid="stSidebar"] [data-testid="column"] {
+        flex: 1 1 100% !important; /* sotto 480px impila verticalmente */
+    }
 }
 
 /* ===== HEADER PRINCIPALE ===== */
@@ -158,29 +180,33 @@ section.main > div, section.main > div > div,
     opacity: 0.95; 
     font-weight: 300; 
 }
-
-/* ===== GRID E COLONNE ===== */
-[data-testid="stHorizontalBlock"] {
-    display: flex !important; 
-    gap: 1.5rem !important; 
-    width: 100% !important; 
-    flex-wrap: wrap !important;
-}
-[data-testid="stHorizontalBlock"] > div,
-[data-testid="column"] { 
-    flex: 1 1 calc(33.333% - 1rem) !important; 
-    min-width: 250px !important; 
-    max-width: 100% !important; 
+/* ===== GRID ORDINATA NELLA SIDEBAR ===== */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* due colonne uguali */
+    gap: 0.5rem 1rem !important; /* gap verticale e orizzontale */
 }
 
-.metrics-grid {
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem; 
-    width: 100% !important; 
-    margin-top: 1rem;
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
+[data-testid="stSidebar"] [data-testid="column"] {
+    flex: unset !important;      /* rimuove flex che sfalsa */
+    width: 100% !important;
+    min-width: 0 !important;     /* evita overflow delle colonne */
+    box-sizing: border-box !important;
 }
 
+/* Forza altezza uniforme delle righe della grid */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div > * {
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* ===== ADATTAMENTO MOBILE ===== */
+@media screen and (max-width: 480px) {
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        grid-template-columns: 1fr !important; /* impila le colonne verticalmente */
+    }
+}
 /* ===== CARD METRICHE ===== */
 .metric-card {
     background: white; 
@@ -317,4 +343,6 @@ a, a:visited, a:hover, a:active, .metric-card a {
     .metric-label { white-space: normal; }
 }
 </style>
+
+
 """

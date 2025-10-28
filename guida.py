@@ -5,7 +5,7 @@ import streamlit as st
 def get_header_content() -> str:
     return r"""
     <div style="text-align:center; margin-top:-10px; margin-bottom:20px;">
-        <h1 style="color:#1F618D; font-weight:700;"> Guida Avanzata al Simulatore APV di RESFARM</h1>
+        <h1 style="color:#1F618D; font-weight:700;">Guida Avanzata al Simulatore APV di RESFARM</h1>
         <p style="font-size:16px; color:#555; line-height:1.5;">
             Simulazione completa dei parametri solari, geometrici e di produzione per impianti APV.
         </p>
@@ -41,6 +41,7 @@ def get_input_info() -> str:
     - **Albedo del terreno [0–1]** (`albedo`)
     - **Data simulazione** (`data`)
     - **Coordinate geografiche** (`lat`, `lon`)
+    - **Pitch pannelli [m]** (`pitch_laterale`, `pitch_verticale`)
     """
 
 # ==================== FUNZIONE PRINCIPALE ====================
@@ -48,12 +49,9 @@ def get_input_info() -> str:
 def show_pv_guide():
     with st.expander("📖 Guida Completa", expanded=False):
         
-
         # Header
         st.markdown(get_header_content(), unsafe_allow_html=True)
         st.markdown(get_introduction_text())
-
-        # ==================== INPUT ====================
         st.markdown(get_input_info())
         st.markdown("---")
 
@@ -62,7 +60,7 @@ def show_pv_guide():
         
         # --- Superficie totale pannelli ---
         st.markdown("### 1.1 Superficie Totale Pannelli [m²]")
-        st.markdown("L'**area totale dei pannelli** si calcola con le seguenti formule:")
+        st.markdown("L'**area di un singolo pannello** si calcola con le formule:")
         st.latex(r"""
         A_{\text{pannello}} = \text{base} \times \text{altezza} \\
         A_{\text{totale}} = N_{\text{pannelli}} \times A_{\text{pannello}}
@@ -79,29 +77,49 @@ superficie_totale = num_panels * panel_area""", language="python")
         """)
         st.code("""superficie_effettiva, gcr = calculate_coverage(num_panels, panel_area)
 gcr = superficie_effettiva / HECTARE_M2""", language="python")
+
+        # --- Calcolo spazi vuoti ---
+        st.markdown("### 1.3 Calcolo Spazi Vuoti tra Pannelli")
+        st.markdown(
+            "Per evitare ombreggiamenti e permettere manutenzione, i pannelli non possono essere piazzati "
+            "uno accanto all’altro senza spazi. Si definiscono **pitch laterale** (tra pannelli affiancati) "
+            "e **pitch verticale** (tra file)."
+        )
+        st.markdown("Formule principali:")
+        st.latex(r"""
+        h_{\text{eff}} = h_{\text{pannello}} \cdot \cos(\text{tilt}) \\
+        S_x = \max(0, P_x - \text{base}) \\
+        S_y = \max(0, P_y - h_{\text{eff}}) \\
+        L_{\text{totale}} = N_{\text{pannelli/fila}} \cdot \text{base} + (N_{\text{pannelli/fila}} - 1) \cdot S_x \\
+        H_{\text{totale}} = N_{\text{file}} \cdot h_{\text{eff}} + (N_{\text{file}} - 1) \cdot S_y \\
+        A_{\text{occupata}} = L_{\text{totale}} \cdot H_{\text{totale}} \\
+        A_{\text{vuota}} = \max(0, A_{\text{terreno}} - A_{\text{occupata}})
+        """)
+        st.code("""altezza_effettiva = altezza_pannello * math.cos(math.radians(tilt))
+spazio_vuoto_laterale = max(0, pitch_laterale - base_pannello)
+spazio_vuoto_verticale = max(0, pitch_verticale - altezza_effettiva)
+
+larghezza_totale = pannelli_per_fila * base_pannello + (pannelli_per_fila - 1) * spazio_vuoto_laterale
+altezza_totale = num_file * altezza_effettiva + (num_file - 1) * spazio_vuoto_verticale
+
+superficie_occupata = larghezza_totale * altezza_totale
+superficie_vuota = max(0, HECTARE_M2 - superficie_occupata)""", language="python")
+
         st.markdown("---")
 
         # ==================== CALCOLI SOLARI ====================
         st.markdown("## 2. Calcoli Solari (Irradianza)")
 
-        # --- GHI ---
         st.markdown("### 2.1 GHI – Global Horizontal Irradiance [W/m²]")
-        st.markdown("La GHI rappresenta la **radiazione totale su un piano orizzontale**:")
         st.latex(r"\text{GHI} = \text{DNI} \cdot \cos(\theta_z) + \text{DHI}")
 
-        # --- DNI ---
         st.markdown("### 2.2 DNI – Direct Normal Irradiance [W/m²]")
-        st.markdown("Radiazione solare diretta misurata perpendicolarmente ai raggi solari:")
         st.latex(r"\text{DNI} = \frac{\text{GHI} - \text{DHI}}{\cos(\theta_z)}")
 
-        # --- DHI ---
         st.markdown("### 2.3 DHI – Diffuse Horizontal Irradiance [W/m²]")
-        st.markdown("Componente diffusa della radiazione proveniente da tutto il cielo eccetto il sole:")
         st.latex(r"\text{DHI} = \text{GHI} - \text{DNI} \cdot \cos(\theta_z)")
 
-        # --- POA ---
         st.markdown("### 2.4 POA – Plane of Array Irradiance [W/m²]")
-        st.markdown("Radiazione incidente sul piano inclinato del modulo:")
         st.latex(r"""
         \text{POA} = \text{DNI} \cdot \cos(\theta_i) + \text{DHI} + \text{GHI} \cdot \text{albedo} \\
         \theta_i = \text{angolo di incidenza sul pannello}
@@ -156,6 +174,7 @@ POA_medio = poa['poa_global'].mean()""", language="python")
 eff_corr = eff * (1 + temp_coeff * (T_cell - 25))
 P_inst = poa_global * area * num_panels * eff_corr * (1 - losses)
 E_day = P_inst.sum()""", language="python")
+        st.markdown("**Nota:** i valori giornalieri si ottengono sommando quelli orari.")
 
         st.markdown("---")
 
@@ -163,7 +182,7 @@ E_day = P_inst.sum()""", language="python")
         st.markdown("## 5. Note Finali")
         st.markdown("""
         - Tutti i valori di irradiamento (GHI, DNI, DHI, POA) sono riferiti a **1 m²**.
-        - I valori giornalieri si ottengono **sommando o mediando** quelli orari.
+        - La produzione giornaliera si ottiene **sommando** i valori orari.
         - Il modello di cielo sereno utilizzato è **Ineichen** (`pvlib`).
         - La superficie e il GCR derivano esclusivamente dai parametri geometrici dei pannelli.
         """)

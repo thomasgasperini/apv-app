@@ -1,10 +1,9 @@
 """
-Modulo per la gestione della sidebar con input utente
-Funzionalità:
-- Header con logo
-- Input localizzazione + data simulazione
+Modulo sidebar con input utente
+- Logo
+- Localizzazione + data simulazione
 - Parametri pannello
-- Parametri sistema elettrico
+- Sistema elettrico
 - Parametri aggiuntivi
 """
 
@@ -12,27 +11,24 @@ from datetime import date
 import streamlit as st
 from geopy.geocoders import Nominatim
 from config import DEFAULT_PARAMS, LOGO_URL, TIMEZONE_OBJ, HECTARE_M2, MESSAGES
-from calculations import calculate_panel_area, calculate_coverage
+from calculations import calculate_coverage
 
+# ==================== HEADER ====================
 def display_sidebar_header():
-    """Visualizza logo responsivo nell'header della sidebar con pulsante visibile in primo piano"""
     st.sidebar.markdown(f"""
     <style>
-        /* === Pulsante di chiusura sempre visibile e ancorato === */
         section[data-testid="stSidebar"] button[kind="icon"],
         section[data-testid="stSidebar"] [role="button"],
         [data-testid="stSidebarCollapseButton"],
         [data-testid="collapsedControl"] {{
-            position: absolute !important;
-            top: 2rem !important;
+            position: relative !important;
+            top: 1rem !important;
             right: 1rem !important;
             z-index: 9999 !important;
             pointer-events: auto !important;
             opacity: 1 !important;
             visibility: visible !important;
         }}
-
-        /* === Contenitore del logo responsivo === */
         .sidebar-header-logo {{
             position: relative;
             z-index: 1;
@@ -49,40 +45,28 @@ def display_sidebar_header():
             max-width: 100%;
             box-sizing: border-box;
         }}
-
-        /* === Logo responsivo === */
         .sidebar-header-logo img {{
-            width: 90%;
+            width: 100%;
             height: auto;
-            max-height: 25vh; /* si adatta all'altezza viewport, evita immagini giganti */
+            max-height: 25vh;
             object-fit: contain;
             object-position: center;
             border-radius: 5px;
         }}
-
-        /* --- Adatta il logo anche su schermi piccoli --- */
         @media (max-height: 700px) {{
             .sidebar-header-logo img {{
                 max-height: 18vh;
             }}
         }}
     </style>
-
     <div class="sidebar-header-logo">
         <img src="{LOGO_URL}" alt="Logo">
     </div>
     """, unsafe_allow_html=True)
+    st.sidebar.markdown("<h3 style='text-align:center; margin-bottom:0rem;'>Interfaccia INPUT</h3>", unsafe_allow_html=True)
 
-
-
-# ==================== LOCALIZZAZIONE + DATA ====================
-    # ----- Intestazione -----
-    st.sidebar.markdown("""
-        <h3 style="text-align:left; margin-bottom:0rem; margin-top:-8">Input Dashboard</h3>
-    """, unsafe_allow_html=True)
-    
-def get_location_from_comune(comune: str) -> tuple:
-    """Geocodifica comune italiano"""
+# ==================== LOCALIZZAZIONE ====================
+def get_location_from_comune(comune: str):
     try:
         geolocator = Nominatim(user_agent="pv_calculator_pro")
         location = geolocator.geocode(f"{comune}, Italia", timeout=10)
@@ -92,24 +76,21 @@ def get_location_from_comune(comune: str) -> tuple:
         st.sidebar.error(f"Errore geocoding: {e}")
     return None, None, None
 
-def get_location_and_date_inputs() -> dict:
-    """Raccoglie input di localizzazione e data simulazione in un unico expander"""
+def get_location_and_date_inputs():
     with st.sidebar.expander("🌍 Localizzazione e Data simulazione", expanded=False):
-        # ----- Localizzazione -----
-        comune = st.text_input("Comune", value=DEFAULT_PARAMS["comune"])
-        lat, lon, location = get_location_from_comune(comune)
-
-        if lat is None or lon is None:
-            st.warning(MESSAGES["location_not_found"])
-            lat = st.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
-            lon = st.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
-            location = None
-        else:
-            st.success(MESSAGES["location_success"].format(lat=lat, lon=lon))
-
-        # ----- Data simulazione -----
-        data_simulazione = st.date_input("Seleziona data", value=date.today())
-
+        col1, col2 = st.columns(2)
+        with col1:
+            comune = st.text_input("Comune", value=DEFAULT_PARAMS["comune"])
+            lat, lon, location = get_location_from_comune(comune)
+            if lat is None or lon is None:
+                st.warning(MESSAGES["location_not_found"])
+                lat = st.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
+                lon = st.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
+                location = None
+                
+        with col2:
+            data_simulazione = st.date_input("Seleziona data", value=date.today())
+        st.success(MESSAGES["location_success"].format(lat=lat, lon=lon))
     return {
         "comune": comune,
         "lat": lat,
@@ -120,177 +101,174 @@ def get_location_and_date_inputs() -> dict:
     }
 
 # ==================== PARAMETRI PANNELLO ====================
-
-def get_panel_geometry() -> dict:
-    """Input parametri geometrici e elettrici del pannello (pvlib-friendly)"""
+def get_panel_geometry():
     with st.sidebar.expander("🔧 Parametri pannello", expanded=False):
+
+        # ===== DEFAULT PARAMETERS =====
+        DEFAULT_PARAMS = {
+            "num_panels": 1,            # int
+            "base_pannello": 2.0,       # float
+            "altezza_pannello": 2.5,    # float
+            "altezza_suolo": 1.0,       # float
+            "tilt": 30,                 # int
+            "azimuth": 180,             # int
+            "eff": 0.18,                # float (0-1)
+            "temp_coeff": -0.004,       # float
+            "noct": 45                  # float
+        }
+
+        # ================== RIGA 1 ==================
         col1, col2 = st.columns(2)
+        num_panels = col1.number_input(
+            "Numero pannelli / ha",
+            value=int(DEFAULT_PARAMS["num_panels"]),
+            step=1,
+            min_value=0
+        )
+        pannelli_per_fila = col2.number_input(
+            "Pannelli per fila",
+            value=int(1),
+            step=1,
+            min_value=1,
+            max_value=num_panels
+        )
+        num_file = (num_panels + pannelli_per_fila - 1) // pannelli_per_fila
+        if num_panels < 2:
+            st.sidebar.info("Consigliato almeno 2 pannelli per una migliore simulazione.")
 
-        with col1:
-            # Numero pannelli e dimensioni
-            num_panels = st.number_input(
-                "Numero pannelli / ha", 
-                value=DEFAULT_PARAMS["num_panels"], step=1, min_value=1
-            )
-            base = st.number_input(
-                "Lato minore pannello [m]", 
-                value=DEFAULT_PARAMS["base"], step=0.1, min_value=0.1
-            )
-            altezza_pannello = st.number_input(
-                "Lato maggiore pannello [m]", 
-                value=DEFAULT_PARAMS["altezza_pannello"], step=0.1, min_value=0.1
-            )
-            area = base * altezza_pannello
+        # ================== RIGA 2 ==================
+        col1, col2 = st.columns(2)
+        base_pannello = col1.number_input(
+            "Lato < pannello [m]",
+            value=float(DEFAULT_PARAMS["base_pannello"]),
+            step=0.1,
+            min_value=0.1
+        )
+        altezza_pannello = col2.number_input(
+            "Lato > pannello [m]",
+            value=float(DEFAULT_PARAMS["altezza_pannello"]),
+            step=0.1,
+            min_value=0.1
+        )
 
-            st.markdown(f"""
-                <div style="margin-bottom:0.6rem;">
-                    <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:0.2rem;">
-                        Area pannello [m²]
-                    </label>
-                    <input type="text" value="{area:.2f}" readonly
-                        style="background-color:#f0f2f6;
-                               color:#000;
-                               border:1px solid #ddd;
-                               border-radius:0.5rem;
-                               padding:0.4rem 0.5rem;
-                               width:100%;
-                               font-size:0.9rem;
-                               cursor:default;">
-                </div>
-            """, unsafe_allow_html=True)
+        # ================== RIGA 3 ==================
+        col1, col2 = st.columns(2)
+        pitch_laterale = col1.number_input(
+            "Pitch laterale [m]",
+            step=0.1,
+            min_value=0.0
+        )
+        pitch_verticale = col2.number_input(
+            "Pitch verticale [m]",
+            step=0.1,
+            min_value=0.0
+        )
 
-            altezza = st.number_input(
-                "Altezza dal suolo [m]", value=DEFAULT_PARAMS["altezza"], step=0.1, min_value=0.1
-            )
+        # ================== RIGA 4 ==================
+        col1, col2 = st.columns(2)
+        area = col1.text_input(
+            "Area pannello [m²]",
+            value=f"{base_pannello*altezza_pannello:.2f}",
+            disabled=True
+        )
+        altezza_suolo = col2.number_input(
+            "Altezza dal suolo [m]",
+            value=float(DEFAULT_PARAMS["altezza_suolo"]),
+            step=0.1,
+            min_value=0.1
+        )
 
-        with col2:
-            # Tilt e azimuth pvlib-friendly
-            tilt_pannello = st.slider(
-                "Tilt pannello [°]",
-                min_value=0,
-                max_value=90,
-                value=DEFAULT_PARAMS["tilt"],
-                help="0° = orizzontale, 90° = verticale"
-            )
+        # ================== RIGA 5 ==================
+        col1, col2, col3 = st.columns(3)
+        tilt = col1.slider(
+            "Tilt pannello [°]",
+            min_value=0,
+            max_value=90,
+            value=int(DEFAULT_PARAMS["tilt"])
+        )
+        azimuth = col2.slider(
+            "Azimuth pannello [°]",
+            min_value=0,
+            max_value=360,
+            value=int(DEFAULT_PARAMS["azimuth"])
+        )
 
-            azimuth_pannello = st.slider(
-                "Azimuth pannello [°]",
-                min_value=0,
-                max_value=360,
-                value=DEFAULT_PARAMS["azimuth"],
-                help="""
-                Azimuth pannello (0–360°):
+        # ================== RIGA 6 ==================
+        col1, col2 = st.columns(2)
+        eff = col1.number_input(
+            "Efficienza [%]",
+            value=float(DEFAULT_PARAMS["eff"]*100),
+            step=0.5,
+            min_value=0.1,
+            max_value=100.0
+        )/100
+        temp_coeff = col2.number_input(
+            "Coeff. γ [%/°C]",
+            value=float(DEFAULT_PARAMS["temp_coeff"]*100),
+            step=0.1
+        )/100
 
-                - 0° / 360° = Nord
-                - 45° = Nord-Est
-                - 90° = Est
-                - 135° = Sud-Est
-                - 180° = Sud
-                - 225° = Sud-Ovest
-                - 270° = Ovest
-                - 315° = Nord-Ovest
-                """
-            )
+        # ================== RIGA 7 ==================
+        noct = st.number_input(
+            "NOCT [°C]",
+            value=float(DEFAULT_PARAMS["noct"]),
+            step=1.0,
+            min_value=20.0,
+            max_value=60.0
+        )
 
-            # Parametri elettrici
-            eff = st.number_input(
-                "Efficienza [%]", value=DEFAULT_PARAMS["eff"]*100, step=0.5, min_value=0.1, max_value=100.0
-            ) / 100
-            temp_coeff = st.number_input(
-                "Coeff. temperatura γ [%/°C]", value=DEFAULT_PARAMS["temp_coeff"]*100, step=0.1
-            ) / 100
-            noct = st.number_input(
-                "NOCT [°C]", value=DEFAULT_PARAMS["noct"], step=1.0, min_value=20.0, max_value=60.0
-            )
 
     return {
         "num_panels": num_panels,
-        "base": base,
+        "pannelli_per_fila": pannelli_per_fila,
+        "num_file": num_file,
+        "base_pannello": base_pannello,
         "altezza_pannello": altezza_pannello,
-        "area": area,
-        "altezza": altezza,
-        "tilt_pannello": tilt_pannello,
-        "azimuth_pannello": azimuth_pannello,
+        "area": altezza_pannello * base_pannello,
+        "pitch_laterale": pitch_laterale,
+        "pitch_verticale": pitch_verticale,
+        "altezza_suolo": altezza_suolo,
+        "tilt_pannello": tilt,
+        "azimuth_pannello": azimuth,
         "eff": eff,
         "temp_coeff": temp_coeff,
         "noct": noct,
     }
 
-# ==================== PARAMETRI SISTEMA ELETTRICO ====================
 
-def get_electrical_parameters() -> dict:
-    """Input parametri del sistema elettrico"""
+# ==================== SISTEMA ELETTRICO ====================
+def get_electrical_parameters():
     with st.sidebar.expander("⚡ Sistema elettrico", expanded=False):
         col1, col2 = st.columns(2)
-        with col1:
-            losses = st.number_input(
-                "Perdite sistema [%]", value=DEFAULT_PARAMS["losses"]*100, step=1.0, min_value=0.0, max_value=50.0
-            ) / 100
-        with col2:
-            albedo = st.number_input(
-                "Albedo", value=DEFAULT_PARAMS["albedo"], step=0.05, min_value=0.0, max_value=1.0, format="%.2f"
-            )
+        losses = col1.number_input("Perdite sistema [%]", value=DEFAULT_PARAMS["losses"]*100, step=1.0, min_value=0.0, max_value=50.0)/100
+        albedo = col2.number_input("Albedo", value=DEFAULT_PARAMS["albedo"], step=0.05, min_value=0.0, max_value=1.0, format="%.2f")
     return {"losses": losses, "albedo": albedo}
 
 # ==================== PARAMETRI AGGIUNTIVI ====================
-
-def get_additional_parameters() -> dict:
-    """Input parametri aggiuntivi opzionali"""
+def get_additional_parameters():
     with st.sidebar.expander("🧩 Parametri aggiuntivi", expanded=False):
-        extra_param = st.number_input("Parametro extra", value=0.0, step=0.1)
-    return {"extra_param": extra_param}
+        col1, col2 = st.columns(2)
+        extra_param1 = col1.number_input("Parametro extra 1", value=0.0, step=0.1)
+        extra_param2 = col2.number_input("Parametro extra 2", value=0.0, step=0.1)
+    return {"extra_param1": extra_param1, "extra_param2": extra_param2}
 
 # ==================== VALIDAZIONE ====================
-
-def validate_and_display_status(panel_params: dict):
-    """Valida la superficie effettiva e GCR"""
+def validate_and_display_status(panel_params):
     superficie_effettiva, gcr = calculate_coverage(panel_params["num_panels"], panel_params["area"])
     is_valid = superficie_effettiva <= HECTARE_M2
-
     if not is_valid:
         max_panels = int(HECTARE_M2 // panel_params["area"])
-        st.sidebar.warning(
-            f"⚠️ Attenzione: superficie totale ({superficie_effettiva:.0f} m²) "
-            f"supera 1 ettaro ({HECTARE_M2} m²)!\n"
-            f"Numero massimo pannelli consentito: {max_panels}"
-        )
+        st.sidebar.warning(f"⚠️ Superficie totale ({superficie_effettiva:.0f} m²) supera 1 ettaro! Max pannelli: {max_panels}")
     else:
-        st.sidebar.success(MESSAGES["surface_valid"].format(
-            superficie=superficie_effettiva, gcr=gcr
-        ))
-
-    return {
-        "is_surface_valid": is_valid,
-        "superficie_effettiva": superficie_effettiva,
-        "gcr": gcr
-    }
+        st.sidebar.success(f"Superficie valida: {superficie_effettiva:.0f} m², GCR: {gcr:.2f}")
+    return {"is_surface_valid": is_valid, "superficie_effettiva": superficie_effettiva, "gcr": gcr}
 
 # ==================== FUNZIONE PRINCIPALE ====================
-
-def sidebar_inputs() -> dict:
-    """Raccoglie tutti gli input dalla sidebar e li valida"""
+def sidebar_inputs():
     display_sidebar_header()
-
-    # Localizzazione + Data simulazione
     location_data = get_location_and_date_inputs()
-
-    # Parametri pannello
     panel_params = get_panel_geometry()
-
-    # Parametri sistema elettrico
     electrical_params = get_electrical_parameters()
-
-    # Parametri aggiuntivi
     additional_params = get_additional_parameters()
-
-    # Validazione superficie e GCR
     validation_results = validate_and_display_status(panel_params)
-
-    # Unione di tutti i parametri
-    return {
-        **location_data,
-        **panel_params,
-        **electrical_params,
-        **additional_params,
-        **validation_results
-    }
+    return {**location_data, **panel_params, **electrical_params, **additional_params, **validation_results}

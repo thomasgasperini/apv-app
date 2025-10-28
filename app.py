@@ -28,7 +28,8 @@ def main():
     display_map_section(params)
     
     # Visualizzazione metriche
-    display_metrics(results)
+    display_metrics(results, params)  # <-- passaggio di params
+
 
 if __name__ == "__main__":
     main()

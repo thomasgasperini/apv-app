@@ -10,18 +10,68 @@ Funzionalità:
 import pandas as pd
 import pvlib
 from config import HECTARE_M2
+import math
 
 # ==================== CALCOLI GEOMETRICI ====================
 
-def calculate_panel_area(base: float, altezza: float) -> float:
+def calculate_panel_area(base_pannello: float, altezza_pannello: float) -> float:
     """Calcola area singolo pannello [m²]."""
-    return base * altezza
+    return base_pannello * altezza_pannello
 
 def calculate_coverage(num_panels: int, panel_area: float) -> tuple[float, float]:
     """Calcola superficie effettiva e GCR"""
     superficie_effettiva = num_panels * panel_area
     gcr = superficie_effettiva / HECTARE_M2
     return superficie_effettiva, gcr
+
+def calculate_empty_space_per_hectare(base_pannello: float, altezza_pannello: float, tilt: float, 
+                                       pitch_laterale: float, pitch_verticale: float, 
+                                       pannelli_per_fila: int, num_file: int):
+    """
+    Calcola lo spazio vuoto all'interno di un ettaro dato layout pannelli, pitch e tilt.
+    Usa HECTARE_M2 dalla configurazione.
+
+    Args:
+        base_pannello (float): lato minore del pannello [m]
+        altezza_pannello (float): lato maggiore del pannello [m]
+        tilt (float): inclinazione pannello [°]
+        pitch_laterale (float): distanza tra centri pannelli affiancati [m]
+        pitch_verticale (float): distanza tra centri pannelli su file diverse [m]
+        pannelli_per_fila (int): numero di pannelli per fila
+        num_file (int): numero di file di pannelli
+
+    Returns:
+        dict: {
+            "spazio_vuoto_laterale": m,
+            "spazio_vuoto_verticale": m,
+            "larghezza_totale": m,
+            "altezza_totale": m,
+            "superficie_occupata": m²,
+            "superficie_vuota": m²
+        }
+    """
+    # Proiezione lato maggiore a terra
+    altezza_effettiva = altezza_pannello * math.cos(math.radians(tilt))
+
+    # Spazio vuoto tra pannelli
+    spazio_vuoto_laterale = max(0, pitch_laterale - base_pannello)
+    spazio_vuoto_verticale = max(0, pitch_verticale - altezza_effettiva)
+
+    # Dimensioni totali occupate
+    larghezza_totale = pannelli_per_fila * base_pannello + (pannelli_per_fila - 1) * spazio_vuoto_laterale
+    altezza_totale = num_file * altezza_effettiva + (num_file - 1) * spazio_vuoto_verticale
+
+    superficie_occupata = larghezza_totale * altezza_totale
+    superficie_vuota = max(0, HECTARE_M2 - superficie_occupata)
+
+    return {
+        "spazio_vuoto_laterale": spazio_vuoto_laterale,
+        "spazio_vuoto_verticale": spazio_vuoto_verticale,
+        "larghezza_totale": larghezza_totale,
+        "altezza_totale": altezza_totale,
+        "superficie_occupata": superficie_occupata,
+        "superficie_vuota": superficie_vuota
+    }
 
 # ==================== CALCOLI SOLARI ====================
 
