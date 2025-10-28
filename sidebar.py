@@ -66,31 +66,60 @@ def display_sidebar_header():
     st.sidebar.markdown("<h3 style='text-align:center; margin-bottom:0rem;'>Interfaccia INPUT</h3>", unsafe_allow_html=True)
 
 # ==================== LOCALIZZAZIONE ====================
-def get_location_from_comune(comune: str):
-    try:
-        geolocator = Nominatim(user_agent="pv_calculator_pro")
-        location = geolocator.geocode(f"{comune}, Italia", timeout=10)
-        if location:
-            return location.latitude, location.longitude, location
-    except Exception as e:
-        st.sidebar.error(f"Errore geocoding: {e}")
+import streamlit as st
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderServiceError, GeocoderTimedOut
+from datetime import date
+import time
+
+def get_location_from_comune(comune: str, max_retries: int = 2):
+    """Tenta di ottenere lat/lon da Nominatim. Riprova alcune volte se fallisce."""
+    geolocator = Nominatim(user_agent="pv_calculator_pro", timeout=10)
+
+    for attempt in range(max_retries):
+        try:
+            location = geolocator.geocode(f"{comune}, Italia")
+            if location:
+                return location.latitude, location.longitude, location
+        except (GeocoderServiceError, GeocoderTimedOut):
+            time.sleep(1.5 * (attempt + 1))  # backoff progressivo
+        except Exception as e:
+            st.sidebar.warning(f"⚠️ Errore geocoding: {e}")
+            break
+
+    # Se non è riuscito a connettersi o trovare la posizione
     return None, None, None
+
 
 def get_location_and_date_inputs():
     with st.sidebar.expander("🌍 Localizzazione e Data simulazione", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
             comune = st.text_input("Comune", value=DEFAULT_PARAMS["comune"])
+
+            # Tentativo di geocoding
             lat, lon, location = get_location_from_comune(comune)
+
+            # Se fallisce → inserimento manuale
             if lat is None or lon is None:
-                st.warning(MESSAGES["location_not_found"])
-                lat = st.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
-                lon = st.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
+                st.info("🌐 Nessuna connessione o località non trovata. Inserisci manualmente le coordinate (lat, lon).")
+                lat = st.number_input(
+                    "Latitudine [°]", 
+                    value=DEFAULT_PARAMS["lat"], 
+                    format="%.4f"
+                )
+                lon = st.number_input(
+                    "Longitudine [°]", 
+                    value=DEFAULT_PARAMS["lon"], 
+                    format="%.4f"
+                )
                 location = None
-                
+
         with col2:
-            data_simulazione = st.date_input("Seleziona data", value=date.today())
-        st.success(MESSAGES["location_success"].format(lat=lat, lon=lon))
+            data_simulazione = st.date_input("📅 Seleziona data", value=date.today())
+
+        st.success(f"📍 Coordinate: lat={lat:.4f}, lon={lon:.4f}")
+
     return {
         "comune": comune,
         "lat": lat,
