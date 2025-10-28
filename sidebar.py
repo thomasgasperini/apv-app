@@ -14,30 +14,66 @@ from geopy.geocoders import Nominatim
 from config import DEFAULT_PARAMS, LOGO_URL, TIMEZONE_OBJ, HECTARE_M2, MESSAGES
 from calculations import calculate_panel_area, calculate_coverage
 
-# ==================== HEADER SIDEBAR ====================
-
 def display_sidebar_header():
-    """Visualizza logo nell'header della sidebar"""
+    """Visualizza logo responsivo nell'header della sidebar con pulsante visibile in primo piano"""
     st.sidebar.markdown(f"""
-    <div style="
-        text-align:center;
-        padding:1rem;
-        margin-bottom:-1rem;
-        margin-top:-4rem;
-        background: linear-gradient(135deg, #74a65b, #f9d71c);
-        border-radius: 15px;
-        height: 240px;
-    ">
-        <img src="{LOGO_URL}" 
-             style="
-                width:90%;
-                height:auto;
-                object-fit: cover;
-                object-position: center bottom;
-             ">
+    <style>
+        /* === Pulsante di chiusura sempre visibile e ancorato === */
+        section[data-testid="stSidebar"] button[kind="icon"],
+        section[data-testid="stSidebar"] [role="button"],
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="collapsedControl"] {{
+            position: absolute !important;
+            top: 2rem !important;
+            right: 1rem !important;
+            z-index: 9999 !important;
+            pointer-events: auto !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }}
 
+        /* === Contenitore del logo responsivo === */
+        .sidebar-header-logo {{
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #74a65b, #f9d71c);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-top: -4rem;
+            margin-bottom: -1rem;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }}
+
+        /* === Logo responsivo === */
+        .sidebar-header-logo img {{
+            width: 90%;
+            height: auto;
+            max-height: 25vh; /* si adatta all'altezza viewport, evita immagini giganti */
+            object-fit: contain;
+            object-position: center;
+            border-radius: 5px;
+        }}
+
+        /* --- Adatta il logo anche su schermi piccoli --- */
+        @media (max-height: 700px) {{
+            .sidebar-header-logo img {{
+                max-height: 18vh;
+            }}
+        }}
+    </style>
+
+    <div class="sidebar-header-logo">
+        <img src="{LOGO_URL}" alt="Logo">
     </div>
     """, unsafe_allow_html=True)
+
+
 
 # ==================== LOCALIZZAZIONE + DATA ====================
     # ----- Intestazione -----
