@@ -3,6 +3,7 @@ Modulo Sidebar - Raccolta input utente
 Gestisce tutti i parametri di input in modo pulito e organizzato
 """
 
+from shapely import area
 import streamlit as st
 from datetime import date
 from geopy.geocoders import Nominatim
@@ -102,7 +103,7 @@ def get_location_from_comune(comune: str, max_retries: int = 3):
 
 def get_location_and_date():
     """Raccoglie località e data simulazione"""
-    with st.sidebar.expander("Localizzazione e Data", expanded=False):
+    with st.sidebar.expander("🌍 Localizzazione e Data", expanded=False):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -131,7 +132,7 @@ def get_location_and_date():
 def get_all_panel_params():
     """Raccoglie tutti i parametri dei pannelli in un unico expander"""
     
-    with st.sidebar.expander("Parametri Pannelli", expanded=True):
+    with st.sidebar.expander("⚙️ Parametri Pannelli", expanded=False):
         
         # --- Layout Pannelli ---
         col1, col2 = st.columns(2)
@@ -153,7 +154,7 @@ def get_all_panel_params():
 
         num_panels_total = num_per_row * num_rows
         
-        # Totale pannelli + Ettari
+        # Totale pannelli + Altezza dal suolo
         col1, col2 = st.columns(2)
         col1.text_input(
             "Totale Pannelli",
@@ -161,13 +162,15 @@ def get_all_panel_params():
             disabled=True,
             help="Numero totale moduli installati"
         )
-        hectares = col2.number_input(
-            "Ettari Totali",
-            value=float(DEFAULT_PARAMS["hectares"]),
+        
+        # ✅ Altezza sostituisce Ettari
+        altezza_suolo = col2.number_input(
+            "Altezza dal Suolo [m]",
+            value=float(DEFAULT_PARAMS.get("altezza_suolo", 1.0)),
             min_value=0.1,
+            max_value=10.0,
             step=0.1,
-            format="%.2f",
-            help="Superficie disponibile del sito"
+            help="Distanza tra la base del modulo e il terreno"
         )
 
         # --- Dimensioni moduli ---
@@ -221,13 +224,13 @@ def get_all_panel_params():
             "Tilt [°]",
             0, 90,
             int(DEFAULT_PARAMS["tilt"]),
-            help="Inclinazione rispetto all'orizzontale: 0°=piatto, 20–35° tipico, 90°=verticale"
+            help="Inclinazione rispetto all'orizzontale"
         )
         azimuth = col2.slider(
             "Azimuth [°]",
             0, 360,
             int(DEFAULT_PARAMS["azimuth"]),
-            help="Direzione: 0°=Nord, 90°=Est, 180°=Sud (ottimale), 270°=Ovest"
+            help="Direzione del modulo"
         )
 
         # --- Parametri elettrici ---
@@ -262,12 +265,12 @@ def get_all_panel_params():
         "num_panels_per_row": num_per_row,
         "num_rows": num_rows,
         "num_panels_total": num_panels_total,
-        "hectares": hectares,
         "altezza_pannello": lato_maggiore,
         "base_pannello": lato_minore,
         "area_pannello": area,
         "distanza_interfile": distanza_file,
         "pitch_laterale": pitch,
+        "altezza_suolo": altezza_suolo,  # AL MOMENTO NON USATO NEI CALCOLI 31/10/2025 h 12:15
         "tilt_pannello": tilt,
         "azimuth_pannello": azimuth,
         "eff": eff,
@@ -278,7 +281,7 @@ def get_all_panel_params():
 
 def get_system_params():
     """Raccoglie parametri sistema"""
-    with st.sidebar.expander("Sistema Elettrico", expanded=False):
+    with st.sidebar.expander("⚡ Sistema Elettrico", expanded=False):
         col1, col2 = st.columns(2)
         
         losses = col1.number_input(
@@ -305,6 +308,30 @@ def get_system_params():
         "albedo": albedo
     }
 
+def get_agricultural_params():
+    """Raccoglie parametri agricoli"""
+    with st.sidebar.expander("🌽 Parametri Agricoli", expanded=False):
+        col1, col2 = st.columns(2)
+        hectares = col1.number_input(
+            "Ettari Totali",
+            value=float(DEFAULT_PARAMS["hectares"]),
+            min_value=0.1,
+            step=0.1,
+            format="%.2f",
+            help="Superficie disponibile del sito"
+        )
+        colture = col2.selectbox(
+            "Tipo di Coltura",
+            options=["Cereali", "Legumi", "Ortaggi", "Frutta"],
+            index=0,
+            help="Seleziona il tipo di coltura"
+        )
+
+    return {
+        "crops": colture,
+        "hectares": hectares
+    }
+
 # ==================== FUNZIONE PRINCIPALE ====================
 
 def sidebar_inputs():
@@ -321,10 +348,12 @@ def sidebar_inputs():
     location_data = get_location_and_date()
     panel_params = get_all_panel_params()  
     system = get_system_params()
+    crops = get_agricultural_params()
 
     # Merge tutti i parametri
     return {
         **location_data,
         **panel_params,
         **system,
+        **crops
     }

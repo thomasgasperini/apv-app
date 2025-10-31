@@ -55,12 +55,12 @@ def create_info_box_content(params: dict) -> str:
     """Crea contenuto info box con parametri input"""
     info_items = [
         ("Comune", params.get("comune", "-")),
-        ("Latitudine", f"{params['lat']:.4f}°"),
-        ("Longitudine", f"{params['lon']:.4f}°"),
+        ("Latitudine", f"{params['lat']:.3f}°"),
+        ("Longitudine", f"{params['lon']:.3f}°"),
         ("Fuso orario", str(params.get('timezone', 'Europe/Rome')).split('/')[-1]),
-        ("Numero pannelli totali", params.get("num_panels_total", "-")),
+        ("N. pannelli totali", params.get("num_panels_total", "-")),
         ("Layout", f"{params.get('num_panels_per_row', '-')} pannelli × {params.get('num_rows', '-')} file"),
-        ("Dimensione pannello", f"{params.get('base_pannello', '-')} × {params.get('altezza_pannello', '-')} m"),
+        ("Dimensione pannello",  f"{params.get('base_pannello', '-')} × {params.get('altezza_pannello', '-')} m"),
         ("Area pannello", f"{params.get('area_pannello', '-'):.2f} m²"),
         ("Inclinazione (β)", f"{params.get('tilt_pannello', '-')}°"),
         ("Azimut", f"{params.get('azimuth_pannello', '-')}°"),
@@ -78,46 +78,47 @@ def create_info_box_content(params: dict) -> str:
 
 
 def create_info_box_html(params: dict, height: int) -> str:
+    """Crea HTML info box con stile"""
     content = create_info_box_content(params)
     return f"""
-    <div class="formula-box" style="height:{height}px">
+    <div class="formula-box" style="
+        height: {height}px;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.25rem 0.5rem;
+        padding: 0.5rem 0.25rem;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+    ">
         {content}
     </div>
-
     <style>
-        .formula-box {{
-            overflow-y:auto;
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-            gap:.25rem .5rem;
-            padding:.5rem .25rem;
-            margin:0;
-            font: .9rem 'Inter',sans-serif;
-        }}
-
         .info-item {{
-            background:#fff;
-            padding:.25rem .5rem;
-            border-radius:4px;
-            box-shadow:0 1px 2px rgba(0,0,0,.05);
-            transition:.15s ease;
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }}
-        .info-item:hover {{
-            transform:translateY(-2px);
-            box-shadow:0 2px 6px rgba(0,0,0,.1);
+        .formula-box::-webkit-scrollbar {{
+            width: 8px;
         }}
-
-        .formula-box::-webkit-scrollbar{{width:8px}}
-        .formula-box::-webkit-scrollbar-track{{background:#fff;border-radius:4px}}
-        .formula-box::-webkit-scrollbar-thumb{{
-            background:#74a65b;
-            border-radius:4px;
-            border:2px solid #fff
+        .formula-box::-webkit-scrollbar-track {{
+            background: #ffffff;
+            border-radius: 4px;
         }}
-        .formula-box{{scrollbar-width:thin;scrollbar-color:#74a65b #fff}}
+        .formula-box::-webkit-scrollbar-thumb {{
+            background-color: #74a65b;
+            border-radius: 4px;
+            border: 2px solid #ffffff;
+        }}
+        .formula-box {{
+            scrollbar-width: thin;
+            scrollbar-color: #74a65b #ffffff;
+        }}
     </style>
     """
-
 
 
 # ==================== FUNZIONE PRINCIPALE ====================

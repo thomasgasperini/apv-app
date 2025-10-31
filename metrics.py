@@ -235,16 +235,4 @@ def display_metrics(results: dict, params: dict):
     )
     geometric_cards = generate_geometric_metrics(results)
     display_card_group(geometric_cards)
-    
-    # Warning GCR elevato
-    gcr = results['gcr']
-    if gcr > 0.4:
-        st.info(
-            f"GCR Elevato ({gcr*100:.1f}%): Spazio limitato per coltivazioni. "
-            f"Superficie libera: {results['superficie_libera']:.0f} m²"
-        )
-    else:
-        st.success(
-            f"Configurazione Ottimale - GCR: {gcr*100:.1f}% - "
-            f"Superficie libera: {results['superficie_libera']:.0f} m² ({(1-gcr)*100:.1f}%)"
-        )
+
