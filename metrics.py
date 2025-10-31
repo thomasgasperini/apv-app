@@ -174,12 +174,6 @@ def generate_geometric_metrics(results: dict) -> list:
             f"{format_value(results['proiezione_totale_pannelli'], 'm²', 0)}",
             "Ingombro al suolo considerando tilt (proiezione pannelli)"
         ),
-        
-        create_metric_card(
-            "Spazio Laterale tra Pannelli",
-            f"{format_value(results['spazio_libero_tra_colonne'], 'm', 2)}",
-            "Spazio laterale residuo tra pannelli"
-        ),
 
         create_metric_card(
             "GCR (Ground Coverage Ratio)",

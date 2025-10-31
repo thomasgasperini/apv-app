@@ -75,8 +75,6 @@ def display_sidebar_header():
     )
 
 
-# ==================== GEOCODING ====================
-
 def get_location_from_comune(comune: str, max_retries: int = 3):
     """
     Ottiene coordinate GPS da nome comune
@@ -84,7 +82,7 @@ def get_location_from_comune(comune: str, max_retries: int = 3):
     Returns:
         tuple: (lat, lon, location) o (None, None, None) se fallisce
     """
-    geolocator = Nominatim(user_agent="resfarm@monitoring.com", domain="https://nominatim.openstreetmap.org", timeout=10)
+    geolocator = Nominatim(user_agent="resfarm@monitoring.com", timeout=10)
     
     for attempt in range(max_retries):
         try:
@@ -97,6 +95,43 @@ def get_location_from_comune(comune: str, max_retries: int = 3):
             break
     
     return None, None, None
+
+
+def get_location_and_date():
+    """Raccoglie località e data simulazione"""
+    
+    # Prima richiesta: ottieni il comune
+    comune = st.sidebar.text_input("Comune", value=DEFAULT_PARAMS["comune"])
+    
+    # Tentativo di geocoding
+    lat, lon, location = get_location_from_comune(comune)
+    
+    # Se fallisce, mostra warning e chiedi coordinate manuali
+    if lat is None or lon is None:
+        st.sidebar.warning(f"⚠️ Impossibile geolocalizzare '{comune}'. Inserisci coordinate manualmente.")
+        
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            lat = st.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
+        with col2:
+            lon = st.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
+        
+        location = None
+    else:
+        # Mostra conferma coordinate trovate
+        st.sidebar.success(f"✓ Coordinate trovate: {lat:.4f}, {lon:.4f}")
+    
+    # Data sempre visibile
+    data_sim = st.sidebar.date_input("Data simulazione", value=date.today())
+    
+    return {
+        "comune": comune,
+        "lat": lat,
+        "lon": lon,
+        "timezone": TIMEZONE_OBJ,
+        "location": location,
+        "data": data_sim
+    }
 
 
 # ==================== SEZIONI INPUT ====================
@@ -127,6 +162,7 @@ def get_location_and_date():
         "location": location,
         "data": data_sim
     }
+
 
 
 def get_all_panel_params():
@@ -163,7 +199,7 @@ def get_all_panel_params():
             help="Numero totale moduli installati"
         )
         
-        # ✅ Altezza sostituisce Ettari
+        # Altezza sostituisce Ettari
         altezza_suolo = col2.number_input(
             "Altezza dal Suolo [m]",
             value=float(DEFAULT_PARAMS.get("altezza_suolo", 1.0)),
@@ -178,20 +214,21 @@ def get_all_panel_params():
 
         lato_maggiore = col1.number_input(
             "Lato Maggiore [m]",
-            value=float(DEFAULT_PARAMS["altezza_pannello"]),
+            value=float(DEFAULT_PARAMS["lato_maggiore"]),
             min_value=0.1,
             step=0.1,
             help="Lato lungo del pannello"
         )
         lato_minore = col2.number_input(
             "Lato Minore [m]",
-            value=float(DEFAULT_PARAMS["base_pannello"]),
+            value=float(DEFAULT_PARAMS["lato_minore"]),
             min_value=0.1,
             step=0.1,
             help="Lato corto del pannello"
         )
 
         area = lato_maggiore * lato_minore
+
         st.text_input(
             "Area Pannello [m²]",
             value=f"{area:.2f}",
@@ -202,12 +239,12 @@ def get_all_panel_params():
         # --- Spaziatura ---
         col1, col2 = st.columns(2)
 
-        distanza_file = col1.number_input(
+        carreggiata = col1.number_input(
             "Distanza tra File [m]",
-            value=float(DEFAULT_PARAMS["distanza_interfile"]),
+            value=float(DEFAULT_PARAMS["carreggiata"]),
             min_value=0.0,
             step=0.5,
-            help="Distanza tra file per evitare ombre"
+            help="Distanza tra file"
         )
         pitch = col2.number_input(
             "Pitch Laterale [m]",
@@ -265,10 +302,10 @@ def get_all_panel_params():
         "num_panels_per_row": num_per_row,
         "num_rows": num_rows,
         "num_panels_total": num_panels_total,
-        "altezza_pannello": lato_maggiore,
-        "base_pannello": lato_minore,
+        "lato_maggiore": lato_maggiore,
+        "lato_minore": lato_minore,
         "area_pannello": area,
-        "distanza_interfile": distanza_file,
+        "carreggiata": carreggiata,
         "pitch_laterale": pitch,
         "altezza_suolo": altezza_suolo,  # AL MOMENTO NON USATO NEI CALCOLI 31/10/2025 h 12:15
         "tilt_pannello": tilt,

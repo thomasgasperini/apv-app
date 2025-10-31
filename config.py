@@ -20,11 +20,11 @@ DEFAULT_PARAMS = {
     # Layout pannelli
     "num_panels_per_row": 5,  # pannelli per fila (larghezza)
     "num_rows": 2,  # numero di file/righe (profondità)
-    "base_pannello": 2.0,  # m - lato minore
-    "altezza_pannello": 2.5,  # m - lato maggiore
+    "lato_minore": 2.0,  # m - lato minore
+    "lato_maggiore": 2.5,  # m - lato maggiore
     
     # Geometria installazione
-    "distanza_interfile": 5.0,  # m - distanza tra file
+    "carreggiata": 5.0,  # m - distanza tra file
     "pitch_laterale": 3.0,  # m - centro-centro pannelli
     "tilt": 30,  # gradi
     "azimuth": 180,  # gradi (Sud)

@@ -60,7 +60,7 @@ def create_info_box_content(params: dict) -> str:
         ("Fuso orario", str(params.get('timezone', 'Europe/Rome')).split('/')[-1]),
         ("N. pannelli totali", params.get("num_panels_total", "-")),
         ("Layout", f"{params.get('num_panels_per_row', '-')} pannelli × {params.get('num_rows', '-')} file"),
-        ("Dimensione pannello",  f"{params.get('base_pannello', '-')} × {params.get('altezza_pannello', '-')} m"),
+        ("Dimensione pannello",  f"{params.get('lato_minore', '-')} × {params.get('lato_maggiore', '-')} m"),
         ("Area pannello", f"{params.get('area_pannello', '-'):.2f} m²"),
         ("Inclinazione (β)", f"{params.get('tilt_pannello', '-')}°"),
         ("Azimut", f"{params.get('azimuth_pannello', '-')}°"),
