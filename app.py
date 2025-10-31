@@ -1,5 +1,5 @@
 import streamlit as st
-from config import CSS, PAGE_CONFIG, MESSAGES, HECTARE_M2
+from config import CSS, PAGE_CONFIG
 from sidebar import sidebar_inputs
 from calculations import calculate_all_pv
 from metrics import display_metrics
@@ -28,7 +28,7 @@ def main():
     display_map_section(params)
     
     # Visualizzazione metriche
-    display_metrics(results, params)  # <-- passaggio di params
+    display_metrics(results, params)
 
 
 if __name__ == "__main__":

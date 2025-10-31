@@ -17,17 +17,17 @@ DEFAULT_PARAMS = {
     "lat": 41.9,
     "lon": 12.5,
     
-    # Pannello
-    "num_panels": 1,
-    "base": 1.0,  # m
-    "altezza_pannello": 1.0,  # m
+    # Layout pannelli
+    "num_panels_per_row": 5,  # pannelli per fila (larghezza)
+    "num_rows": 2,  # numero di file/righe (profondità)
+    "base_pannello": 2.0,  # m - lato minore
+    "altezza_pannello": 2.5,  # m - lato maggiore
     
     # Geometria installazione
-    "altezza": 1.0,  # m dal suolo
-    "pitch_laterale": 1.0,  # m
-    "pitch_file": 2.0,  # m
+    "distanza_interfile": 5.0,  # m - distanza tra file
+    "pitch_laterale": 3.0,  # m - centro-centro pannelli
     "tilt": 30,  # gradi
-    "azimuth": 0, 
+    "azimuth": 180,  # gradi (Sud)
     
     # Caratteristiche elettriche
     "eff": 0.20,  # efficienza 20%
@@ -35,6 +35,9 @@ DEFAULT_PARAMS = {
     "temp_coeff": -0.004,  # %/°C
     "losses": 0.10,  # perdite di sistema 10%
     "albedo": 0.2,  # riflettanza del suolo
+    
+    # Superficie terreno
+    "hectares": 1.0,  # ettari totali del campo
 }
 
 # ==================== COLORI TEMA ====================
@@ -62,11 +65,8 @@ CHART_CONFIG = {
 
 # ==================== MESSAGGI UI ====================
 MESSAGES = {
-    "location_not_found": "⚠️ Comune non trovato",
+    "location_not_found": "Comune non trovato",
     "location_success": "Coordinate: {lat:.4f} °N, {lon:.4f}°E",
-    "surface_warning": "⚠️ La superficie totale ({superficie:.0f} m²) supera 1 ettaro.",
-    "surface_exceed": "⚠️ La disposizione dei pannelli supera 1 ettaro! Superficie: {superficie:.0f} m²",
-    "surface_valid": "✅ Input validi: {superficie:.0f} m² ({gcr:.2%} GCR)",
 }
 
 # ==================== CONFIGURAZIONE PAGINA ====================
@@ -112,7 +112,7 @@ section.main > div, section.main > div > div,
     flex-direction: column;
     align-items: stretch !important;
     padding-top: 1rem !important;
-    min-width: 250px !important; /* aumentata per colonne affiancate */
+    min-width: 250px !important;
     max-width: 400px !important;
 }
 
@@ -141,23 +141,23 @@ section.main > div, section.main > div > div,
 }
 
 /* ===== COLONNE AFFIANCATE NELLA SIDEBAR ===== */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem 1rem !important;
+}
+
 [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
 [data-testid="stSidebar"] [data-testid="column"] {
-    flex: 1 1 30% !important;  /* due colonne affiancate */
-    min-width: 0 !important;   /* elimina min-width che forza il wrap verticale */
-    margin-right: 0.5rem !important; /* piccolo gap */
+    flex: unset !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
 }
 
-[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:last-child,
-[data-testid="stSidebar"] [data-testid="column"]:last-child {
-    margin-right: 0 !important;
-}
-
-/* ===== ADATTAMENTO MOBILE ===== */
 @media screen and (max-width: 480px) {
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
-    [data-testid="stSidebar"] [data-testid="column"] {
-        flex: 1 1 100% !important; /* sotto 480px impila verticalmente */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        grid-template-columns: 1fr !important;
     }
 }
 
@@ -180,33 +180,7 @@ section.main > div, section.main > div > div,
     opacity: 0.95; 
     font-weight: 300; 
 }
-/* ===== GRID ORDINATA NELLA SIDEBAR ===== */
-[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important; /* due colonne uguali */
-    gap: 0.5rem 1rem !important; /* gap verticale e orizzontale */
-}
 
-[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div,
-[data-testid="stSidebar"] [data-testid="column"] {
-    flex: unset !important;      /* rimuove flex che sfalsa */
-    width: 100% !important;
-    min-width: 0 !important;     /* evita overflow delle colonne */
-    box-sizing: border-box !important;
-}
-
-/* Forza altezza uniforme delle righe della grid */
-[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div > * {
-    width: 100% !important;
-    height: auto !important;
-}
-
-/* ===== ADATTAMENTO MOBILE ===== */
-@media screen and (max-width: 480px) {
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        grid-template-columns: 1fr !important; /* impila le colonne verticalmente */
-    }
-}
 /* ===== CARD METRICHE ===== */
 .metric-card {
     background: white; 
@@ -284,20 +258,6 @@ section.main > div, section.main > div > div,
     box-shadow: 0 5px 15px rgba(116,166,91,0.4); 
 }
 
-[data-testid="stSidebar"][aria-expanded="false"] > div:first-child .stButton>button {
-    max-width: 100% !important; 
-    min-width: 0 !important;
-}
-
-/* ===== GRAFICI E MAPPE ===== */
-.stPlotlyChart, .stMatplotlib, .st-folium {
-    background-color: white !important; 
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-    width: 100%; 
-    height: auto;
-}
-
 /* ===== LINK ===== */
 a, a:visited, a:hover, a:active, .metric-card a { 
     color: #74a65b !important; 
@@ -317,10 +277,6 @@ a, a:visited, a:hover, a:active, .metric-card a {
     border-radius: 4px;
     border: 2px solid #ffffff;
 }
-.formula-box {
-    scrollbar-width: thin;
-    scrollbar-color: #74a65b #ffffff;
-}
 
 /* ===== INFO ITEM ===== */
 .info-item {
@@ -334,15 +290,7 @@ a, a:visited, a:hover, a:active, .metric-card a {
 @media screen and (max-width: 768px) {
     [data-testid="stHorizontalBlock"] > div,
     [data-testid="column"] { flex: 1 1 100% !important; }
-    .metrics-grid { grid-template-columns: 1fr; gap: 1rem; }
-    .metric-label { white-space: normal; }
-}
-
-@media screen and (max-width: 480px) {
-    .metrics-grid { grid-template-columns: 1fr; gap: 1rem; }
     .metric-label { white-space: normal; }
 }
 </style>
-
-
 """

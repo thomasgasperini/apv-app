@@ -1,32 +1,32 @@
 """
-Modulo per visualizzazione metriche PV
-Funzionalità:
-- Creazione card metriche W/m², Wh/m², W e Wh
-- Layout responsivo
-- Visualizzazione GHI, DNI, DHI, POA globale e produzione elettrica
-- Visualizzazione metriche geometriche: superficie, GCR e spazio vuoto
+Modulo Metriche - Visualizzazione risultati con card pulite e moderne
 """
 
 import streamlit as st
-from calculations import calculate_empty_space_per_hectare
+
 
 # ==================== UTILITY ====================
 
-def get_screen_width() -> int:
-    """Ritorna la larghezza dello schermo, fallback a 1200 px."""
-    try:
-        from screeninfo import get_monitors
-        return get_monitors()[0].width
-    except:
-        return 1200
-
 def format_value(value: float, unit: str = "", decimals: int = 0) -> str:
-    """Formatta un valore numerico con unità e decimali."""
+    """Formatta valore con unità"""
     return f"{value:.{decimals}f} {unit}".strip()
 
-def create_metric_card(label: str, value: str, description: str, color: str = None) -> str:
-    """Crea una card HTML per visualizzare una metrica."""
+
+def create_metric_card(label: str, value: str, description: str = "", color: str = None) -> str:
+    """
+    Crea card HTML per metrica
+    
+    Args:
+        label: titolo metrica
+        value: valore (può includere HTML come <br>)
+        description: descrizione opzionale
+        color: colore valore opzionale
+    
+    Returns:
+        HTML card
+    """
     color_style = f"color:{color};" if color else ""
+    
     return f"""
     <div class="metric-card" style="
         background:#f0f2f6;
@@ -37,127 +37,214 @@ def create_metric_card(label: str, value: str, description: str, color: str = No
     ">
         <div class="metric-label" style="font-weight:600; font-size:0.9rem;">{label}</div>
         <div class="metric-value" style="font-size:1.2rem; margin:0.2rem 0; {color_style}">{value}</div>
-        <div class="metric-description" style="font-size:0.75rem; color:#555;">{description}</div>
+        {f'<div class="metric-description" style="font-size:0.75rem; color:#555;">{description}</div>' if description else ''}
     </div>
     """
 
-# ==================== METRICHE SOLARI ====================
 
-def generate_solar_metrics(results: dict) -> list:
-    """Genera metriche radiazione e produzione elettrica."""
-    return [
-        create_metric_card(
-            "GHI",
-            f"{format_value(results['GHI_Wm2'].mean(), 'W/m²')}<br>{format_value(results['GHI_Whm2'], 'Wh/m²')}",
-            "Radiazione globale orizzontale: media oraria e totale giornaliera."
-        ),
-        create_metric_card(
-            "DNI",
-            f"{format_value(results['DNI_Wm2'].mean(), 'W/m²')}<br>{format_value(results['DNI_Whm2'], 'Wh/m²')}",
-            "Radiazione diretta normale: media oraria e totale giornaliera."
-        ),
-        create_metric_card(
-            "DHI",
-            f"{format_value(results['DHI_Wm2'].mean(), 'W/m²')}<br>{format_value(results['DHI_Whm2'], 'Wh/m²')}",
-            "Radiazione diffusa orizzontale: media oraria e totale giornaliera."
-        ),
-        create_metric_card(
-            "POA",
-            f"{format_value(results['POA_global_Wm2'].mean(), 'W/m²')}<br>{format_value(results['POA_Whm2'], 'Wh/m²')}",
-            "Radiazione sul piano dei pannelli: media oraria e totale giornaliera."
-        ),
-        create_metric_card(
-            "Produzione Elettrica",
-            f"{format_value(results['PV_power_W'].mean(), 'W')}<br>{format_value(results['PV_energy_Wh'], 'Wh')}",
-            "Produzione elettrica media oraria e totale giornaliera."
-        )
-    ]
+def get_screen_width() -> int:
+    """Rileva larghezza schermo (fallback: 1200px)"""
+    try:
+        from screeninfo import get_monitors
+        return get_monitors()[0].width
+    except:
+        return 1200
 
-# ==================== METRICHE GEOMETRICHE ====================
-
-def generate_geometric_metrics(results: dict, params: dict) -> list:
-    """Genera metriche geometriche: superficie, GCR, spazio vuoto e dimensioni impianto."""
-    
-    # Calcola lo spazio vuoto e dimensioni totali
-    empty_space = calculate_empty_space_per_hectare(
-        base_pannello=params["base_pannello"],
-        altezza_pannello=params["altezza_pannello"],
-        tilt=params["tilt_pannello"],
-        pitch_laterale=params["pitch_laterale"],
-        pitch_verticale=params["pitch_verticale"],
-        pannelli_per_fila=params["pannelli_per_fila"],
-        num_file=params["num_file"]
-    )
-    
-    superficie = results['superficie_effettiva']
-    gcr = results['gcr']
-    gcr_color = "red" if gcr > 0.4 else "green"
-
-    return [
-        create_metric_card(
-            "Superficie Totale Pannelli",
-            format_value(superficie, "m²", decimals=0),
-            "Area complessiva dei pannelli installati."
-        ),
-        create_metric_card(
-            "Suolo Occupato da Pannelli",
-            format_value(empty_space["superficie_occupata"], "m²", decimals=1),
-            "Superficie effettivamente coperta dai pannelli (tiene conto della proiezione).",
-        ),
-        create_metric_card(
-            "Land Area Coverage (GCR)",
-            format_value(gcr * 100, "%", decimals=1),
-            "Rapporto tra superficie pannelli e area totale del sito.",
-            color=gcr_color
-        ),
-        create_metric_card(
-            "Superficie Libera nel Sito",
-            format_value(empty_space["superficie_vuota"], "m²", decimals=1),
-            "Superficie del sito non occupata dai pannelli.",
-        )
-    ]
-
-# ==================== GENERAZIONE TUTTE LE METRICHE ====================
-
-def generate_metric_cards(results: dict, params: dict) -> list:
-    """Genera tutte le metriche combinate."""
-    return generate_solar_metrics(results) + generate_geometric_metrics(results, params)
-
-# ==================== DISPLAY METRICHE ====================
-
-def display_metrics(results: dict, params: dict):
-    """Visualizza le metriche in Streamlit con layout responsivo."""
-
-    # --- Titolo metriche solari ---
-    st.markdown(
-        '<p class="section-header" style="margin-top: 1rem;">Parametri di irradiamento solare e produzione energetica</p>',
-        unsafe_allow_html=True
-    )
-
-    metric_cards_solar = generate_solar_metrics(results)
-    display_card_group(metric_cards_solar)
-
-    # --- Titolo metriche geometriche ---
-    st.markdown(
-        '<p class="section-header" style="margin-top: 1rem;">Geometria e copertura dei moduli</p>',
-        unsafe_allow_html=True
-    )
-
-    metric_cards_geom = generate_geometric_metrics(results, params)
-    display_card_group(metric_cards_geom)
 
 def display_card_group(cards: list):
-    """Funzione helper per disporre le card con layout responsivo."""
+    """
+    Dispone card in layout responsivo
+    
+    Desktop: 3 card per riga
+    Mobile: 1 card per riga
+    """
     screen_width = get_screen_width()
+    
     if screen_width > 768:
+        # Layout desktop: 3 colonne
         for i in range(0, len(cards), 3):
             row_cards = cards[i:i+3]
             while len(row_cards) < 3:
                 row_cards.append("")
+            
             cols = st.columns(3, gap="medium")
             for col, card in zip(cols, row_cards):
                 if card:
                     col.markdown(card, unsafe_allow_html=True)
     else:
+        # Layout mobile: 1 colonna
         for card in cards:
             st.markdown(card, unsafe_allow_html=True)
+
+
+# ==================== GENERAZIONE METRICHE ====================
+
+def generate_solar_metrics(results: dict) -> list:
+    """
+    Genera card per metriche solari
+    
+    Returns:
+        Lista di card HTML
+    """
+    return [
+        create_metric_card(
+            "GHI",
+            f"{format_value(results['GHI_Wm2'].mean(), 'W/m²')}<br>"
+            f"{format_value(results['GHI_Whm2'], 'Wh/m²')}",
+            "Radiazione globale orizzontale (media oraria / totale giornaliero)"
+        ),
+        
+        create_metric_card(
+            "DNI",
+            f"{format_value(results['DNI_Wm2'].mean(), 'W/m²')}<br>"
+            f"{format_value(results['DNI_Whm2'], 'Wh/m²')}",
+            "Radiazione diretta normale (media oraria / totale giornaliero)"
+        ),
+        
+        create_metric_card(
+            "DHI",
+            f"{format_value(results['DHI_Wm2'].mean(), 'W/m²')}<br>"
+            f"{format_value(results['DHI_Whm2'], 'Wh/m²')}",
+            "Radiazione diffusa orizzontale (media oraria / totale giornaliero)"
+        ),
+        
+        create_metric_card(
+            "POA",
+            f"{format_value(results['POA_Wm2'].mean(), 'W/m²')}<br>"
+            f"{format_value(results['POA_Whm2'], 'Wh/m²')}",
+            "Radiazione sul piano pannelli (media oraria / totale giornaliero)"
+        ),
+        
+        create_metric_card(
+            "T° Media Celle",
+            f"{format_value(results['T_cell_avg'], '°C', 1)}",
+            "Temperatura media delle celle fotovoltaiche"
+        ),
+    ]
+
+
+def generate_production_metrics(results: dict) -> list:
+    """
+    Genera card per produzione elettrica
+    
+    Returns:
+        Lista di card HTML
+    """
+    return [
+        create_metric_card(
+            "Produzione Singolo Pannello",
+            f"{format_value(results['power_single_W'].mean(), 'W')}<br>"
+            f"{format_value(results['energy_single_Wh'], 'Wh')}",
+            "Potenza media oraria / Energia giornaliera singolo pannello"
+        ),
+        
+        create_metric_card(
+            "Produzione Totale",
+            f"{format_value(results['power_total_W'].mean(), 'W')}<br>"
+            f"{format_value(results['energy_total_Wh'], 'Wh')}",
+            "Potenza media oraria / Energia giornaliera tutti i pannelli"
+        ),
+        
+        create_metric_card(
+            "Produzione Energetica per m²",
+            f"{format_value(results['energy_total_Wh_m2'], 'Wh/m²', 1)}",
+            "Energia giornaliera per metro quadro di pannello"
+        ),
+    ]
+
+def generate_geometric_metrics(results: dict) -> list:
+    """
+    Genera card per metriche geometriche
+    
+    Returns:
+        Lista di card HTML
+    """
+    gcr = results['gcr']
+    gcr_color = "red" if gcr > 0.4 else "green"
+    
+    return [
+        create_metric_card(
+            "Superficie Totale Pannelli",
+            f"{format_value(results['superficie_totale_pannelli'], 'm²', 0)}",
+            "Area nominale totale (base × altezza × numero pannelli)"
+        ),
+        
+        create_metric_card(
+            "Spazio Occupato (Proiezione)",
+            f"{format_value(results['proiezione_totale_pannelli'], 'm²', 0)}",
+            "Ingombro al suolo considerando tilt (proiezione pannelli)"
+        ),
+        
+        create_metric_card(
+            "Spazio Laterale tra Pannelli",
+            f"{format_value(results['spazio_libero_tra_colonne'], 'm', 2)}",
+            "Spazio laterale residuo tra pannelli"
+        ),
+
+        create_metric_card(
+            "GCR (Ground Coverage Ratio)",
+            f"{format_value(gcr * 100, '%', 1)}",
+            "Rapporto tra proiezione pannelli e superficie campo",
+            color=gcr_color
+        ),
+        
+        create_metric_card(
+            "Superficie Libera",
+            f"{format_value(results['superficie_libera'], 'm²', 0)}",
+            "Terreno libero disponibile (campo - proiezione pannelli)"
+        ),
+    ]
+
+
+# ==================== FUNZIONE PRINCIPALE ====================
+
+def display_metrics(results: dict, params: dict):
+    """
+    Visualizza tutte le metriche organizzate in sezioni
+    
+    Args:
+        results: dizionario risultati da calculate_all_pv()
+        params: parametri input
+    """
+    # SEZIONE 1: Irradiamento Solare
+    st.markdown(
+        '<p class="section-header" style="margin-top: 1rem;">'
+        'Irradiamento Solare'
+        '</p>',
+        unsafe_allow_html=True
+    )
+    solar_cards = generate_solar_metrics(results)
+    display_card_group(solar_cards)
+    
+    # SEZIONE 2: Produzione Elettrica
+    st.markdown(
+        '<p class="section-header" style="margin-top: 1rem;">'
+        'Produzione Elettrica'
+        '</p>',
+        unsafe_allow_html=True
+    )
+    production_cards = generate_production_metrics(results)
+    display_card_group(production_cards)
+    
+    # SEZIONE 3: Geometria e Copertura
+    st.markdown(
+        '<p class="section-header" style="margin-top: 1rem;">'
+        'Geometria e Copertura Terreno'
+        '</p>',
+        unsafe_allow_html=True
+    )
+    geometric_cards = generate_geometric_metrics(results)
+    display_card_group(geometric_cards)
+    
+    # Warning GCR elevato
+    gcr = results['gcr']
+    if gcr > 0.4:
+        st.info(
+            f"GCR Elevato ({gcr*100:.1f}%): Spazio limitato per coltivazioni. "
+            f"Superficie libera: {results['superficie_libera']:.0f} m²"
+        )
+    else:
+        st.success(
+            f"Configurazione Ottimale - GCR: {gcr*100:.1f}% - "
+            f"Superficie libera: {results['superficie_libera']:.0f} m² ({(1-gcr)*100:.1f}%)"
+        )

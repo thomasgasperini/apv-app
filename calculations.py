@@ -1,90 +1,154 @@
 """
-Modulo per calcoli fotovoltaici
-Funzionalità:
-- Calcolo posizione solare
-- Calcolo irradianza (GHI, DNI, DHI, POA globale)
-- Calcolo parametri geometrici (superficie, GCR)
-- Calcolo produzione elettrica dei pannelli
+Modulo Calcoli - Gestisce tutti i calcoli geometrici, solari ed elettrici
 """
 
 import pandas as pd
 import pvlib
-from config import HECTARE_M2
 import math
+from config import HECTARE_M2
+
 
 # ==================== CALCOLI GEOMETRICI ====================
 
-def calculate_panel_area(base_pannello: float, altezza_pannello: float) -> float:
-    """Calcola area singolo pannello [m²]."""
-    return base_pannello * altezza_pannello
-
-def calculate_coverage(num_panels: int, panel_area: float) -> tuple[float, float]:
-    """Calcola superficie effettiva e GCR"""
-    superficie_effettiva = num_panels * panel_area
-    gcr = superficie_effettiva / HECTARE_M2
-    return superficie_effettiva, gcr
-
-def calculate_empty_space_per_hectare(base_pannello: float, altezza_pannello: float, tilt: float, 
-                                       pitch_laterale: float, pitch_verticale: float, 
-                                       pannelli_per_fila: int, num_file: int):
+def calculate_ground_projection(altezza: float, tilt: float) -> float:
     """
-    Calcola lo spazio vuoto all'interno di un ettaro dato layout pannelli, pitch e tilt.
-    Usa HECTARE_M2 dalla configurazione.
-
+    Calcola proiezione a terra di un pannello inclinato
+    
     Args:
-        base_pannello (float): lato minore del pannello [m]
-        altezza_pannello (float): lato maggiore del pannello [m]
-        tilt (float): inclinazione pannello [°]
-        pitch_laterale (float): distanza tra centri pannelli affiancati [m]
-        pitch_verticale (float): distanza tra centri pannelli su file diverse [m]
-        pannelli_per_fila (int): numero di pannelli per fila
-        num_file (int): numero di file di pannelli
-
+        altezza: altezza pannello [m]
+        tilt: inclinazione [°]
+    
     Returns:
-        dict: {
-            "spazio_vuoto_laterale": m,
-            "spazio_vuoto_verticale": m,
-            "larghezza_totale": m,
-            "altezza_totale": m,
-            "superficie_occupata": m²,
-            "superficie_vuota": m²
-        }
+        proiezione a terra [m]
     """
-    # Proiezione lato maggiore a terra
-    altezza_effettiva = altezza_pannello * math.cos(math.radians(tilt))
+    return altezza * math.cos(math.radians(tilt))
 
-    # Spazio vuoto tra pannelli
-    spazio_vuoto_laterale = max(0, pitch_laterale - base_pannello)
-    spazio_vuoto_verticale = max(0, pitch_verticale - altezza_effettiva)
 
-    # Dimensioni totali occupate
-    larghezza_totale = pannelli_per_fila * base_pannello + (pannelli_per_fila - 1) * spazio_vuoto_laterale
-    altezza_totale = num_file * altezza_effettiva + (num_file - 1) * spazio_vuoto_verticale
+def calculate_panel_metrics(params: dict) -> dict:
+    """
+    Calcola metriche geometriche dei pannelli
+    
+    Args:
+        params: dizionario parametri input
+    
+    Returns:
+        dict con:
+            - superficie_totale_pannelli: area nominale totale [m²]
+            - proiezione_singolo: proiezione a terra singolo pannello [m²]
+            - proiezione_totale: proiezione a terra tutti i pannelli [m²]
+    """
+    # Area nominale singolo pannello
+    area_singolo = params["area_pannello"]
+    
+    # Area nominale totale
+    superficie_totale = area_singolo * params["num_panels_total"]
+    
+    # Proiezione a terra singolo pannello
+    proiezione_altezza = calculate_ground_projection(
+        params["altezza_pannello"], 
+        params["tilt_pannello"]
+    )
+    proiezione_singolo = params["base_pannello"] * proiezione_altezza
+    
+    # Proiezione totale
+    proiezione_totale = proiezione_singolo * params["num_panels_total"]
+    
+    return {
+        "superficie_totale_pannelli": superficie_totale,
+        "proiezione_singolo_pannello": proiezione_singolo,
+        "proiezione_totale_pannelli": proiezione_totale
+    }
 
-    superficie_occupata = larghezza_totale * altezza_totale
-    superficie_vuota = max(0, HECTARE_M2 - superficie_occupata)
+
+def calculate_inter_row_spacing(params: dict, panel_metrics: dict) -> dict:
+    """
+    Calcola spaziatura tra le file di pannelli
+    
+    Args:
+        params: parametri input
+        panel_metrics: metriche pannelli
+    
+    Returns:
+        dict con:
+            - spazio_libero_tra_file: spazio libero residuo tra file [m]
+            - pitch_effettivo: pitch effettivamente utilizzato [m]
+            - gcr_effettivo: GCR considerando il pitch [0-1]
+    """
+    # Proiezione in altezza del pannello inclinato
+    proiezione_altezza = calculate_ground_projection(
+        params["altezza_pannello"],
+        params["tilt_pannello"]
+    )
+    
+    # Lato minore (altezza proiettata) per il calcolo dello spazio libero
+    lato_minore = proiezione_altezza
+
+    # Spazio libero residuo tra colonne (formula richiesta)
+    spazio_libero_tra_colonne = params["pitch_laterale"] - (lato_minore / 2)
+    
+    # Pitch effettivo (distanza tra assi delle file)
+    pitch_effettivo = params["pitch_laterale"]
+
 
     return {
-        "spazio_vuoto_laterale": spazio_vuoto_laterale,
-        "spazio_vuoto_verticale": spazio_vuoto_verticale,
-        "larghezza_totale": larghezza_totale,
-        "altezza_totale": altezza_totale,
-        "superficie_occupata": superficie_occupata,
-        "superficie_vuota": superficie_vuota
+        "spazio_libero_tra_colonne": max(0, spazio_libero_tra_colonne),
+        "pitch_effettivo": pitch_effettivo,
     }
+
+
+def calculate_occupied_space(params: dict, panel_metrics: dict) -> dict:
+    """
+    Calcola spazio occupato sul terreno considerando layout reale
+    
+    Args:
+        params: parametri input
+        panel_metrics: metriche pannelli
+    
+    Returns:
+        dict con:
+            - gcr: Ground Coverage Ratio [0-1]
+            - superficie_libera: spazio libero rimanente [m²]
+    """
+    # Superficie totale campo
+    superficie_campo = params["hectares"] * HECTARE_M2
+    
+    # Calcola spaziatura tra file
+    spacing_metrics = calculate_inter_row_spacing(params, panel_metrics)
+    
+    # GCR basato solo sulla proiezione pannelli (non layout completo)
+    gcr = panel_metrics["proiezione_totale_pannelli"] / superficie_campo
+    
+    # Superficie libera
+    superficie_libera = superficie_campo - panel_metrics["proiezione_totale_pannelli"]
+    
+    return {
+        "gcr": gcr,
+        "superficie_libera": max(0, superficie_libera),
+        **spacing_metrics
+    }
+
 
 # ==================== CALCOLI SOLARI ====================
 
 def calculate_solar_position(times: pd.DatetimeIndex, lat: float, lon: float) -> pd.DataFrame:
+    """Calcola posizione solare"""
     return pvlib.solarposition.get_solarposition(times, lat, lon)
 
-def calculate_clearsky_irradiance(times: pd.DatetimeIndex, lat: float, lon: float, timezone: str) -> pd.DataFrame:
-    site = pvlib.location.Location(lat, lon, tz=timezone)
+
+def calculate_clearsky_irradiance(times: pd.DatetimeIndex, lat: float, lon: float, tz: str) -> pd.DataFrame:
+    """Calcola irradianza cielo sereno"""
+    site = pvlib.location.Location(lat, lon, tz=tz)
     return site.get_clearsky(times, model="ineichen")
 
-def calculate_poa_global(clearsky: pd.DataFrame, solpos: pd.DataFrame,
+
+def calculate_poa_global(clearsky: pd.DataFrame, solpos: pd.DataFrame, 
                          tilt: float, azimuth: float, albedo: float) -> pd.Series:
-    """Calcola POA globale [W/m²] sul piano dei pannelli"""
+    """
+    Calcola POA (Plane of Array) globale
+    
+    Returns:
+        Serie POA [W/m²]
+    """
     poa = pvlib.irradiance.get_total_irradiance(
         surface_tilt=tilt,
         surface_azimuth=azimuth,
@@ -97,114 +161,144 @@ def calculate_poa_global(clearsky: pd.DataFrame, solpos: pd.DataFrame,
     )
     return poa['poa_global'].round(0).astype(int)
 
-# ==================== CALCOLO PV BASE ====================
-
-def calculate_pv_basic(params: dict) -> dict:
-    """Calcola GHI, DNI, DHI, POA globale [W/m²] e Wh/m² giornalieri"""
-    times = pd.date_range(
-        start=pd.Timestamp(params["data"]),
-        end=pd.Timestamp(params["data"]) + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
-        freq="1h",
-        tz=params["timezone"]
+def estimate_ambient_temperature(times: pd.DatetimeIndex, lat: float) -> pd.Series:
+    """
+    Stima temperatura ambiente oraria con modello sinusoidale
+    
+    Returns:
+        Serie temperatura [°C]
+    """
+    month = times[0].month
+    
+    # Stima temperatura media stagionale
+    if month in [12, 1, 2]:  # Inverno
+        T_media = 8 - (lat - 40) * 0.5
+        escursione = 6
+    elif month in [3, 4, 5]:  # Primavera
+        T_media = 15 - (lat - 40) * 0.3
+        escursione = 8
+    elif month in [6, 7, 8]:  # Estate
+        T_media = 26 - (lat - 40) * 0.4
+        escursione = 10
+    else:  # Autunno
+        T_media = 16 - (lat - 40) * 0.3
+        escursione = 7
+    
+    # Temperatura oraria sinusoidale (min h6, max h14)
+    hours = times.hour
+    T_amb = T_media + escursione * pd.Series(
+        [math.sin(math.pi * (h - 6) / 12) for h in hours],
+        index=times
     )
+    
+    return T_amb
 
-    superficie_effettiva, gcr = calculate_coverage(params["num_panels"], params["area"])
 
-    solpos = calculate_solar_position(times, params["lat"], params["lon"])
-    clearsky = calculate_clearsky_irradiance(times, params["lat"], params["lon"], params["timezone"])
+# ==================== CALCOLI PRODUZIONE ELETTRICA ====================
 
-    poa_global = calculate_poa_global(clearsky, solpos, params["tilt_pannello"], params["azimuth_pannello"], params["albedo"])
-
-    return {
-        "times": times,
-        "GHI_Wm2": clearsky['ghi'].round(0).astype(int),
-        "DNI_Wm2": clearsky['dni'].round(0).astype(int),
-        "DHI_Wm2": clearsky['dhi'].round(0).astype(int),
-        "POA_global_Wm2": poa_global,
-        "GHI_Whm2": clearsky['ghi'].sum().round(0).astype(int),
-        "DNI_Whm2": clearsky['dni'].sum().round(0).astype(int),
-        "DHI_Whm2": clearsky['dhi'].sum().round(0).astype(int),
-        "POA_Whm2": poa_global.sum().round(0).astype(int),
-        "superficie_effettiva": superficie_effettiva,
-        "gcr": gcr
-    }
-
-# ==================== CALCOLO PRODUZIONE ELETTRICA ====================
-
-def calculate_pv_production(params: dict, poa_global: pd.Series) -> dict:
-    """Calcola produzione elettrica istantanea [W] e giornaliera [Wh]"""
-    T_cell = 25 + (poa_global / 800) * (params["noct"] - 20)
+def calculate_pv_production(params: dict, poa_global: pd.Series, T_amb: pd.Series) -> dict:
+    """
+    Calcola produzione elettrica
+    
+    Args:
+        params: parametri elettrici
+        poa_global: radiazione POA [W/m²]
+        T_amb: temperatura ambiente [°C]
+    
+    Returns:
+        dict con:
+            - power_single_W: potenza singolo pannello [W]
+            - power_total_W: potenza totale [W]
+            - energy_single_Wh: energia singolo pannello [Wh]
+            - energy_total_Wh: energia totale [Wh]
+            - energy_single_Wh_m2: energia/m² singolo [Wh/m²]
+            - energy_total_Wh_m2: energia/m² totale [Wh/m²]
+            - T_cell_avg: temperatura media celle [°C]
+    """
+    # Temperatura celle
+    T_cell = T_amb + (poa_global / 800) * (params["noct"] - 20)
+    
+    # Efficienza corretta per temperatura
     eff_corr = params["eff"] * (1 + params["temp_coeff"] * (T_cell - 25))
+    
+    # Potenza istantanea singolo pannello [W]
+    power_single = (
+        poa_global * params["area_pannello"] * eff_corr * (1 - params["losses"])).round(0).astype(int)
 
-    P_inst = poa_global * params["area"] * params["num_panels"] * eff_corr * (1 - params["losses"])
-    P_inst = P_inst.round(0).astype(int)
-    E_day = P_inst.sum()
-
+    # Potenza totale [W]
+    power_total = power_single * params["num_panels_total"]
+    
+    # Energia giornaliera
+    energy_single = power_single.sum()
+    energy_total = power_total.sum()
+    
+    # Energia per m²
+    energy_total_m2 = energy_total / (params["area_pannello"] * params["num_panels_total"])
+    
     return {
-        "PV_power_W": P_inst,
-        "PV_energy_Wh": E_day
+        "power_single_W": power_single,
+        "power_total_W": power_total,
+        "energy_single_Wh": energy_single,
+        "energy_total_Wh": energy_total,
+        "energy_total_Wh_m2": energy_total_m2,
+        "T_cell_avg": T_cell.mean()
     }
 
-# ==================== FUNZIONE TUTTI I CALCOLI ====================
+
+# ==================== FUNZIONE PRINCIPALE ====================
 
 def calculate_all_pv(params: dict) -> dict:
     """
-    Calcola tutti i parametri fotovoltaici principali per un giorno:
-
-    Parametri:
-        params (dict): dizionario contenente tutti i parametri di input
-                       (geometria pannelli, sistema elettrico, lat/lon, data, ecc.)
-
-    Restituisce:
-        dict: {
-            times: DatetimeIndex,
-            GHI_Wm2, DNI_Wm2, DHI_Wm2: irradiance istantanea [W/m²],
-            POA_global_Wm2: POA sul piano dei pannelli [W/m²],
-            GHI_Whm2, DNI_Whm2, DHI_Whm2, POA_Whm2: energia giornaliera [Wh/m²],
-            superficie_effettiva: superficie totale pannelli [m²],
-            gcr: Ground Coverage Ratio,
-            PV_power_W: potenza istantanea [W],
-            PV_energy_Wh: energia giornaliera [Wh]
-        }
+    Calcola tutti i parametri PV
+    
+    Args:
+        params: dizionario completo parametri input
+    
+    Returns:
+        dict con tutti i risultati
     """
-    # ------------------- 1. Calcolo base PV -------------------
+    # Serie temporale oraria
     times = pd.date_range(
         start=pd.Timestamp(params["data"]),
         end=pd.Timestamp(params["data"]) + pd.Timedelta(days=1) - pd.Timedelta(hours=1),
         freq="1h",
         tz=params["timezone"]
     )
-
-    # Superficie effettiva e GCR
-    superficie_effettiva, gcr = calculate_coverage(params["num_panels"], params["area"])
-
-    # Posizione solare e irradianza clearsky
+    
+    # Calcoli geometrici
+    panel_metrics = calculate_panel_metrics(params)
+    occupied_space = calculate_occupied_space(params, panel_metrics)
+    
+    # Calcoli solari
     solpos = calculate_solar_position(times, params["lat"], params["lon"])
-    clearsky = calculate_clearsky_irradiance(times, params["lat"], params["lon"], params["timezone"])
-
-    # POA globale sul piano dei pannelli
-    poa_global = calculate_poa_global(
-        clearsky, solpos, params["tilt_pannello"], params["azimuth_pannello"], params["albedo"]
-    )
-
-    # ------------------- 2. Calcolo produzione elettrica -------------------
-    production = calculate_pv_production(params, poa_global)
-
-    # ------------------- 3. Preparazione risultato -------------------
-    results = {
+    clearsky = calculate_clearsky_irradiance(times, params["lat"], params["lon"], str(params["timezone"]))
+    poa_global = calculate_poa_global(clearsky, solpos, params["tilt_pannello"], 
+                                      params["azimuth_pannello"], params["albedo"])
+    T_amb = estimate_ambient_temperature(times, params["lat"])
+    
+    # Produzione elettrica
+    production = calculate_pv_production(params, poa_global, T_amb)
+    
+    # Assemblaggio risultati
+    return {
+        # Serie temporali
         "times": times,
         "GHI_Wm2": clearsky['ghi'].round(0).astype(int),
         "DNI_Wm2": clearsky['dni'].round(0).astype(int),
         "DHI_Wm2": clearsky['dhi'].round(0).astype(int),
-        "POA_global_Wm2": poa_global,
+        "POA_Wm2": poa_global,
+        "T_amb": T_amb.round(1),
+        
+        # Totali giornalieri
         "GHI_Whm2": clearsky['ghi'].sum().round(0).astype(int),
         "DNI_Whm2": clearsky['dni'].sum().round(0).astype(int),
         "DHI_Whm2": clearsky['dhi'].sum().round(0).astype(int),
         "POA_Whm2": poa_global.sum().round(0).astype(int),
-        "superficie_effettiva": superficie_effettiva,
-        "gcr": gcr,
-        "PV_power_W": production["PV_power_W"],
-        "PV_energy_Wh": production["PV_energy_Wh"]
+        
+        # Metriche geometriche
+        **panel_metrics,
+        **occupied_space,
+        
+        # Produzione elettrica
+        **production
     }
-
-    return results
