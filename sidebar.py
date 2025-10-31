@@ -75,55 +75,42 @@ def display_sidebar_header():
     )
 
 
-def get_location_from_comune(comune: str, max_retries: int = 3):
-    """
-    Ottiene coordinate GPS da nome comune
-    
-    Returns:
-        tuple: (lat, lon, location) o (None, None, None) se fallisce
-    """
+from functools import lru_cache
+
+@lru_cache(maxsize=200)
+def cached_geocode(comune: str):
     geolocator = Nominatim(user_agent="resfarm@monitoring.com", timeout=10)
-    
+    return geolocator.geocode(f"{comune}, Italia")
+
+
+def get_location_from_comune(comune: str, max_retries: int = 3):
+    """Ritorna (lat, lon, location) o (None, None, None) se fallisce"""
     for attempt in range(max_retries):
         try:
-            location = geolocator.geocode(f"{comune}, Italia")
-            if location:
-                return location.latitude, location.longitude, location
+            if loc := cached_geocode(comune):
+                return loc.latitude, loc.longitude, loc
         except (GeocoderServiceError, GeocoderTimedOut):
-            time.sleep(1 * (attempt + 1))
+            time.sleep(attempt + 1)
         except Exception:
             break
-    
+
     return None, None, None
 
 
 def get_location_and_date():
-    """Raccoglie località e data simulazione"""
-    
-    # Prima richiesta: ottieni il comune
+    """Input comune -> geocoding o inserimento manuale -> data simulazione"""
     comune = st.sidebar.text_input("Comune", value=DEFAULT_PARAMS["comune"])
-    
-    # Tentativo di geocoding
     lat, lon, location = get_location_from_comune(comune)
-    
-    # Se fallisce, mostra warning e chiedi coordinate manuali
-    if lat is None or lon is None:
+
+    if not lat or not lon:
         st.sidebar.warning(f"⚠️ Impossibile geolocalizzare '{comune}'. Inserisci coordinate manualmente.")
-        
         col1, col2 = st.sidebar.columns(2)
-        with col1:
-            lat = st.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
-        with col2:
-            lon = st.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
-        
+        lat = col1.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
+        lon = col2.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
         location = None
-    else:
-        # Mostra conferma coordinate trovate
-        st.sidebar.success(f"✓ Coordinate trovate: {lat:.4f}, {lon:.4f}")
-    
-    # Data sempre visibile
+
     data_sim = st.sidebar.date_input("Data simulazione", value=date.today())
-    
+
     return {
         "comune": comune,
         "lat": lat,
