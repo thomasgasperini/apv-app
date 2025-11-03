@@ -189,6 +189,60 @@ def generate_geometric_metrics(results: dict) -> list:
         ),
     ]
 
+def generate_agri_metrics(agri_results: dict) -> list:
+    """
+    Genera card per metriche agrivoltaiche
+    """
+
+    crop_color = agri_results.get('crop_status_color', None)
+
+    return [
+        create_metric_card(
+            "DLI Disponibile",
+            f"{format_value(agri_results['DLI_mol_m2_day'], 'mol/m²·day', 1)}",
+            "Media giornaliera di luce fotosinteticamente attiva disponibile sul campo"
+        ),
+
+        create_metric_card(
+            "DLI Richiesto",
+            f"{format_value(agri_results['DLI_min'], agri_results['unit'])}<br>"
+            f"{format_value(agri_results['DLI_opt'], agri_results['unit'])}",
+            "Fabbisogno giornaliero di luce fotosinteticamente attiva della coltura (min - ottimale)"
+        ),
+
+        create_metric_card(
+            "Adeguatezza Luminosità",
+            f"{format_value(agri_results['crop_light_adequacy_pct'], '%', 0)}",
+            "Percentuale del fabbisogno luminoso soddisfatto dalla luce disponibile",
+            color=crop_color
+        ),
+
+        create_metric_card(
+            "Stato Coltura",
+            agri_results['crop_status'],
+            "Valutazione dell'idoneità agronomica della coltura secondo il DLI",
+            color=crop_color
+        ),
+
+        create_metric_card(
+            "Ombreggiamento Medio",
+            f"{format_value(agri_results['shaded_fraction_avg']*100, '%', 1)}",
+            "Media giornaliera della frazione di superficie del campo in ombra"
+        ),
+
+        create_metric_card(
+            "Uniformità Luminosa",
+            f"{format_value(agri_results['light_uniformity']*100, '%', 1)}",
+            "Uniformità dell'illuminazione sul campo (0 = minima, 100% = massima)"
+        ),
+        
+        create_metric_card(
+            "Ombra Massima",
+            f"{format_value(agri_results['shadow_area_max_m2'], 'm²', 0)}",
+            "Area massima in ombra rilevata sul campo durante la giornata"
+        ),
+    ]
+
 
 # ==================== FUNZIONE PRINCIPALE ====================
 
@@ -229,4 +283,15 @@ def display_metrics(results: dict, params: dict):
     )
     geometric_cards = generate_geometric_metrics(results)
     display_card_group(geometric_cards)
+
+    # SEZIONE 4: Metriche Agrivoltaiche
+
+    st.markdown(
+        '<p class="section-header" style="margin-top: 1rem;">'
+        'Metriche Agrivoltaiche'
+        '</p>',
+        unsafe_allow_html=True
+        )
+    agri_cards = generate_agri_metrics(results["agri_results"])
+    display_card_group(agri_cards)
 

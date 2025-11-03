@@ -194,6 +194,7 @@ def calculate_all_pv(params: dict) -> dict:
         "DHI_Wm2": clearsky['dhi'].round(0).astype(int),
         "POA_Wm2": poa_global,
         "T_amb": T_amb.round(1),
+        "solpos": solpos,
         
         # Totali giornalieri
         "GHI_Whm2": clearsky['ghi'].sum().round(0).astype(int),

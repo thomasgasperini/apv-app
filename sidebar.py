@@ -334,7 +334,7 @@ def get_system_params():
 
 def get_agricultural_params():
     """Raccoglie parametri agricoli"""
-    with st.sidebar.expander("🌽 Parametri Agricoli", expanded=False):
+    with st.sidebar.expander("🌽 Coltura", expanded=False):
         col1, col2 = st.columns(2)
         hectares = col1.number_input(
             "Ettari Totali",
@@ -346,7 +346,18 @@ def get_agricultural_params():
         )
         colture = col2.selectbox(
             "Tipo di Coltura",
-            options=["Cereali", "Legumi", "Ortaggi", "Frutta"],
+            options=[
+                "Microgreens",
+                "Ortaggi a foglia",
+                "Tuberi",
+                "Ortaggi da frutto bassi",
+                "Cereali",
+                "Legumi",
+                "Ortaggi da frutto alti",
+                "Frutta (alberi e arbusti)",
+                "Viti",
+                "Piante ornamentali alte"
+            ],
             index=0,
             help="Seleziona il tipo di coltura"
         )

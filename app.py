@@ -5,6 +5,7 @@ from calculations import calculate_all_pv
 from metrics import display_metrics
 from maps import display_map_section
 from guida import show_pv_guide
+from agri_calculations import calculate_all_agri
 
 def setup_page():
     """Configura la pagina Streamlit e applica CSS globale"""
@@ -14,22 +15,27 @@ def setup_page():
 def main():
     """Funzione principale dell'applicazione"""
     setup_page()
-    
-    # Raccolta input da sidebar
+
+    # --- Collect user inputs ---
     params = sidebar_inputs()
     
-    # Mostra guida introduttiva
     show_pv_guide()
     
-    # Esegui calcoli fotovoltaici completi
+    # --- PV calculations ---
     results = calculate_all_pv(params)
-    
-    # Visualizzazione mappa e info impianto
-    display_map_section(params)
-    
-    # Visualizzazione metriche
-    display_metrics(results, params)
 
+    # --- Agricultural calculations (requires PV results) ---
+    agri_results = calculate_all_agri(params, results)
+    
+    # Merge agricultural results into PV results
+    results["agri_results"] = agri_results
+
+    # --- Debug: show selected crop ---
+    st.write(f"Selected crop: {params['crops']}")
+    
+    # --- Map and metrics ---
+    display_map_section(params)
+    display_metrics(results, params)
 
 if __name__ == "__main__":
     main()
