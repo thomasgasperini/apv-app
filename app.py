@@ -29,9 +29,6 @@ def main():
     
     # Merge agricultural results into PV results
     results["agri_results"] = agri_results
-
-    # --- Debug: show selected crop ---
-    st.write(f"Selected crop: {params['crops']}")
     
     # --- Map and metrics ---
     display_map_section(params)

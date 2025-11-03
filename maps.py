@@ -57,7 +57,6 @@ def create_info_box_content(params: dict) -> str:
         ("Comune", params.get("comune", "-")),
         ("Latitudine", f"{params['lat']:.3f}°"),
         ("Longitudine", f"{params['lon']:.3f}°"),
-        ("Fuso orario", str(params.get('timezone', 'Europe/Rome')).split('/')[-1]),
         ("N. pannelli totali", params.get("num_panels_total", "-")),
         ("Layout", f"{params.get('num_panels_per_row', '-')} pannelli × {params.get('num_rows', '-')} file"),
         ("Dimensione pannello",  f"{params.get('lato_minore', '-')} × {params.get('lato_maggiore', '-')} m"),
@@ -72,6 +71,7 @@ def create_info_box_content(params: dict) -> str:
         ("Perdite sistema", f"{params.get('losses', 0)*100 if isinstance(params.get('losses'), float) else params.get('losses')}%"),
         ("Albedo", f"{params.get('albedo', 0):.2f}"),
         ("Ettari campo", f"{params.get('hectares', '-')}"),
+        ("Coltura", f"{params.get('crops', '-')}")
     ]
     
     return "".join([format_info_item(name, value) for name, value in info_items])

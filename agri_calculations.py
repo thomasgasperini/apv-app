@@ -160,31 +160,6 @@ def evaluate_crop_suitability(par_under_umol: pd.Series,
         "unit": unit
     }
 
-# ==================== UNIFORMITÀ LUMINOSA ====================
-
-def calculate_light_uniformity(par_under: pd.Series, par_between: pd.Series) -> float:
-    """
-    Calcola l'uniformità della luce sul campo agrivoltaico.
-    
-    L'uniformità è definita come 1 - (deviazione standard / media) della PAR
-    combinata tra sotto i pannelli e tra le file. Restituisce un valore tra 0 e 1:
-        - 1 = luce perfettamente uniforme
-        - 0 = luce molto disomogenea
-
-    Args:
-        par_under (pd.Series): PAR sotto i pannelli (μmol/m²/s)
-        par_between (pd.Series): PAR tra le file di pannelli (μmol/m²/s)
-
-    Returns:
-        float: indice di uniformità della luce sul campo (0-1)
-    """
-    all_par = pd.concat([par_under, par_between])
-    mean = all_par.mean()
-    std = all_par.std()
-    if mean > 0:
-        return max(0, 1 - std / mean)
-    return 0
-
 # ==================== FUNZIONE PRINCIPALE ====================
 
 def calculate_all_agri(params: dict, pv_results: dict) -> dict:
@@ -219,10 +194,6 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
     )
 
 
-    uniformity = calculate_light_uniformity(
-        par_data['PAR_under_panels_umol'], par_data['PAR_between_rows_umol']
-    )
-
     return {
         "times": times,
         "shaded_fraction": shaded_fraction,
@@ -248,8 +219,5 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
         "crop_light_adequacy_pct": crop_eval["field_weighted"]["percentage"],
         "DLI_min": crop_eval["DLI_min"],
         "DLI_opt": crop_eval["DLI_opt"],
-        "unit": crop_eval["unit"],
-
-        # Uniformità luce
-        "light_uniformity": uniformity,
+        "unit": crop_eval["unit"]   
     }

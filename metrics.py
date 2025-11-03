@@ -229,12 +229,6 @@ def generate_agri_metrics(agri_results: dict) -> list:
             f"{format_value(agri_results['shaded_fraction_avg']*100, '%', 1)}",
             "Media giornaliera della frazione di superficie del campo in ombra"
         ),
-
-        create_metric_card(
-            "Uniformità Luminosa",
-            f"{format_value(agri_results['light_uniformity']*100, '%', 1)}",
-            "Uniformità dell'illuminazione sul campo (0 = minima, 100% = massima)"
-        ),
         
         create_metric_card(
             "Ombra Massima",
