@@ -282,7 +282,7 @@ def display_metrics(results: dict, params: dict):
 
     st.markdown(
         '<p class="section-header" style="margin-top: 1rem;">'
-        'Metriche Agrivoltaiche'
+        'Metriche Agronomiche'
         '</p>',
         unsafe_allow_html=True
         )

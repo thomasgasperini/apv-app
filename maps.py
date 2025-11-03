@@ -77,30 +77,27 @@ def create_info_box_content(params: dict) -> str:
     return "".join([format_info_item(name, value) for name, value in info_items])
 
 
-def create_info_box_html(params: dict, height: int) -> str:
-    """Crea HTML info box con stile"""
+def create_info_box_html(params: dict, max_height: int = 600) -> str:
+    """Crea HTML info box responsive con stile ottimizzato per tutti i dispositivi"""
+    
     content = create_info_box_content(params)
+    
     return f"""
     <div class="formula-box" style="
-        height: {height}px;
-        overflow-y: auto;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 0.25rem 0.5rem;
-        padding: 0.5rem 0.25rem;
+        padding: clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.2rem, 1vw, 0.25rem);
         margin: 0;
         font-family: 'Inter', sans-serif;
-        font-size: 0.9rem;
+        font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+        max-height: {max_height}px;
+        overflow-y: auto;
     ">
         {content}
     </div>
+    
     <style>
-        .info-item {{
-            background: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }}
         .formula-box::-webkit-scrollbar {{
             width: 8px;
         }}
@@ -116,6 +113,17 @@ def create_info_box_html(params: dict, height: int) -> str:
         .formula-box {{
             scrollbar-width: thin;
             scrollbar-color: #74a65b #ffffff;
+        }}
+        .info-item {{
+            background: white;
+            padding: clamp(0.2rem, 1vw, 0.5rem);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }}
+        @media screen and (max-width: 480px) {{
+            .formula-box {{
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }}
         }}
     </style>
     """

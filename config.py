@@ -93,6 +93,7 @@ div[data-testid="stSidebar"] {
     background-color: white !important;
     font-family: 'Inter', sans-serif;
     color: #000 !important;
+    line-height: 1.5;
 }
 
 /* ===== LAYOUT PRINCIPALE ===== */
@@ -101,7 +102,7 @@ section.main > div, section.main > div > div,
 .main .block-container, .appview-container .main .block-container {
     width: 100% !important;
     max-width: none !important;
-    padding: 1rem !important;
+    padding: clamp(0.5rem, 3vw, 1rem) !important;
     margin: 0 !important;
     transition: none !important;
 }
@@ -111,8 +112,8 @@ section.main > div, section.main > div > div,
     display: flex !important;
     flex-direction: column;
     align-items: stretch !important;
-    padding-top: 1rem !important;
-    min-width: 250px !important;
+    padding-top: clamp(0.5rem, 2vw, 1rem) !important;
+    min-width: 200px !important;
     max-width: 400px !important;
 }
 
@@ -184,7 +185,7 @@ section.main > div, section.main > div > div,
 /* ===== CARD METRICHE ===== */
 .metric-card {
     background: white; 
-    padding: 1rem; 
+    padding: clamp(0.75rem, 2.5vw, 1rem); 
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
     border-left: 4px solid #74a65b;
@@ -201,14 +202,14 @@ section.main > div, section.main > div > div,
     box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
 }
 .metric-value { 
-    font-size: clamp(1.5rem, 2.5vw, 2rem); 
+    font-size: clamp(1.5rem, 4vw, 2rem); 
     font-weight: 700; 
     color: #74a65b; 
     margin: 0.25rem 0; 
     line-height: 1.2; 
 }
 .metric-label { 
-    font-size: clamp(0.75rem, 1.8vw, 0.85rem); 
+    font-size: clamp(0.75rem, 2.2vw, 0.85rem); 
     color: #000 !important; 
     text-transform: uppercase; 
     letter-spacing: 1px; 
@@ -230,7 +231,7 @@ section.main > div, section.main > div > div,
 .formula-box {
     background: #f8f9fa; 
     border-left: 4px solid #74a65b; 
-    padding: 1rem; 
+    padding: clamp(0.75rem, 2vw, 1rem); 
     border-radius: 8px;
     margin: 1.5rem 0; 
     font-family: 'Courier New', monospace; 
@@ -243,7 +244,7 @@ section.main > div, section.main > div > div,
 .stButton>button {
     width: 100% !important; 
     max-width: 300px !important; 
-    min-width: 200px !important;
+    min-width: 150px !important;
     margin-bottom: 1rem; 
     border-radius: 8px;
     background: linear-gradient(135deg, #74a65b 0%, #a3c68b 100%);
@@ -291,6 +292,13 @@ a, a:visited, a:hover, a:active, .metric-card a {
     [data-testid="stHorizontalBlock"] > div,
     [data-testid="column"] { flex: 1 1 100% !important; }
     .metric-label { white-space: normal; }
+    .metric-card { min-height: 100px; }
+    .formula-box { font-size: clamp(0.75rem, 2vw, 0.9rem); }
+}
+
+@media screen and (max-width: 480px) {
+    .metric-card { padding: clamp(0.5rem, 2vw, 0.75rem); }
+    .stButton>button { min-width: 120px !important; }
 }
 </style>
 """

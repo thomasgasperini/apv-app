@@ -15,7 +15,7 @@ from config import DEFAULT_PARAMS, LOGO_URL, TIMEZONE_OBJ
 # ==================== HEADER SIDEBAR ====================
 
 def display_sidebar_header():
-    """Visualizza logo e titolo nella sidebar"""
+    """Visualizza logo e titolo nella sidebar in modo responsive"""
     st.sidebar.markdown(f"""
     <style>
         section[data-testid="stSidebar"] button[kind="icon"],
@@ -23,7 +23,7 @@ def display_sidebar_header():
         [data-testid="stSidebarCollapseButton"],
         [data-testid="collapsedControl"] {{
             position: relative !important;
-            top: 0.5rem !important;
+            top: -1rem !important;
             right: 1rem !important;
             z-index: 9999 !important;
             pointer-events: auto !important;
@@ -39,27 +39,31 @@ def display_sidebar_header():
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #74a65b, #f9d71c);
-            border-radius: 15px;
-            padding: 1rem;
-            margin-top: -4rem;
-            margin-bottom: -1rem;
+            border-radius: 10px;
+            padding: 2vw; /* padding scalabile */
+            margin-top: -10vh;
+            margin-bottom: -1vh;
             width: 100%;
             max-width: 100%;
             box-sizing: border-box;
         }}
         
         .sidebar-header-logo img {{
-            width: 100%;
+            width: auto;
             height: auto;
-            max-height: 25vh;
+            max-height: 20vh; /* scala con altezza viewport */
+            max-width: 90%;   /* scala con larghezza contenitore */
             object-fit: contain;
             object-position: center;
             border-radius: 5px;
         }}
         
-        @media (max-height: 700px) {{
+        @media (max-width: 600px) {{
+            .sidebar-header-logo {{
+                padding: 4vw;
+            }}
             .sidebar-header-logo img {{
-                max-height: 18vh;
+                max-height: 20vh;
             }}
         }}
     </style>
@@ -334,7 +338,7 @@ def get_system_params():
 
 def get_agricultural_params():
     """Raccoglie parametri agricoli"""
-    with st.sidebar.expander("🌽 Coltura", expanded=False):
+    with st.sidebar.expander("🌽 Parametri Agricoli", expanded=False):
         col1, col2 = st.columns(2)
         hectares = col1.number_input(
             "Ettari Totali",
