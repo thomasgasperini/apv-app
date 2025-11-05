@@ -195,15 +195,21 @@ def generate_agri_metrics(agri_results: dict) -> list:
     """
 
     crop_color = agri_results.get('crop_status_color', None)
-
+    
     return [
-        create_metric_card(
-            "DLI Disponibile",
-            f"{format_value(agri_results['DLI_mol_m2_day'], 'mol/m²·day', 1)}",
-            "Media giornaliera di luce fotosinteticamente attiva disponibile sul campo"
-        ),
+            create_metric_card(
+                "DLI totale giornaliero",
+                f"{format_value(agri_results['DLI_mol_m2_day'], 'mol/m²·day', 1)}",
+                "Totale giornaliero di luce fotosinteticamente attiva"
+            ),
 
-        create_metric_card(
+            create_metric_card(
+                "PPFD medio diurno",
+                f"{format_value(agri_results['PAR_hourly_avg_umol'], 'µmol/m²·s', 0)}",
+                "Flusso medio di fotoni PAR durante le ore di luce (intensità luminosa)"
+            ),
+
+        create_metric_card( 
             "DLI Richiesto",
             f"{format_value(agri_results['DLI_min'], agri_results['unit'])}<br>"
             f"{format_value(agri_results['DLI_opt'], agri_results['unit'])}",

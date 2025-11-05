@@ -40,7 +40,7 @@ def display_sidebar_header():
             justify-content: center;
             background: linear-gradient(135deg, #74a65b, #f9d71c);
             border-radius: 15px;
-            padding: 1.5vw; /* padding scalabile */
+            padding: 0.5vw; /* padding scalabile */
             margin-top: -10vh;
             margin-bottom: -1vh;
             width: 100%;

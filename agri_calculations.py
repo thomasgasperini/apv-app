@@ -106,9 +106,19 @@ def calculate_par_distribution(ghi: pd.Series, shaded_fraction: pd.Series,
         "PAR_weighted_W": par_weighted
     }
 
-
-def calculate_dli(par_weighted_umol: pd.Series) -> float:
-    return (par_weighted_umol.sum() * 3600) / 1e6
+def calculate_dli_and_hourly_avg(par_weighted_umol: pd.Series) -> dict:
+    """
+    Restituisce:
+    - DLI giornaliero (mol/m2/day)
+    - PAR media oraria (µmol/m2/s)
+    """
+    dli = (par_weighted_umol.sum() * 3600) / 1e6   # DLI giornaliero
+    par_hourly_avg = par_weighted_umol.mean()       # intensità media oraria della PAR
+    
+    return {
+        "DLI_mol_m2_day": dli,
+        "PAR_hourly_avg_umol": par_hourly_avg
+    }
 
 
 def evaluate_crop_suitability(par_under_umol: pd.Series,
@@ -185,7 +195,7 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
 
     par_data = calculate_par_distribution(ghi, shaded_fraction)
 
-    dli = calculate_dli(par_data['PAR_weighted_umol'])
+    dli_results = calculate_dli_and_hourly_avg(par_data['PAR_weighted_umol'])
     crop_eval = evaluate_crop_suitability(
         par_data['PAR_under_panels_umol'],
         par_data['PAR_between_rows_umol'],
@@ -210,8 +220,9 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
         "shadow_length_max_m": shadow_df['shadow_length_m'].max(),
 
         # DLI
-        "DLI_mol_m2_day": dli,
-        "PAR_daily_avg_umol": par_data['PAR_weighted_umol'].mean(),
+        "DLI_mol_m2_day": dli_results["DLI_mol_m2_day"],
+        "PAR_hourly_avg_umol": dli_results["PAR_hourly_avg_umol"],
+
 
         # Stato coltura
         "crop_status": crop_eval["field_weighted"]["status"],
