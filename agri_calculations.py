@@ -1,10 +1,9 @@
 """
 Modulo Calcoli Agricoli - Parametri agrivoltaico (microclima rimosso)
-Analizza l'impatto dei pannelli FV sulle colture sottostanti (solo radiazione)
+Analizza l'impatto dei pannelli FV sulle colture sottostanti tramite DLI
 """
 
 import pandas as pd
-import numpy as np
 import math
 from config import HECTARE_M2
 
@@ -36,6 +35,7 @@ DLI_REQUIREMENTS = {
 }
 
 # ==================== CALCOLO OMBRA DINAMICA ====================
+
 def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
                                 tilt: float, azimuth_panel: float,
                                 sun_elevation: pd.Series, sun_azimuth: pd.Series,
@@ -43,8 +43,6 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
 
     tilt_rad = math.radians(tilt)
     area_pannello = lato_maggiore * lato_minore
-
-    # Altezza punto più alto
     H = altezza_suolo + lato_minore * math.sin(tilt_rad)
 
     shadow_length, shadow_width, shadow_area = [], [], []
@@ -61,15 +59,9 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
         if delta_azimuth > 180:
             delta_azimuth = 360 - delta_azimuth
 
-        # Lunghezza ombra determinata dall'altezza reale
         L_shadow = H / math.tan(elev_rad)
-
-        # Larghezza come proiezione dell'area sull'asse perpendicolare alla luce
         W_shadow = (area_pannello * math.cos(tilt_rad)) / max(L_shadow, 1e-6)
-
-        # Correzione per orientamento rispetto al sole
         W_shadow *= abs(math.cos(math.radians(delta_azimuth)))
-
         A_shadow = L_shadow * W_shadow
 
         shadow_length.append(L_shadow)
@@ -88,83 +80,62 @@ def calculate_shaded_fraction(shadow_df: pd.DataFrame, num_panels: int, superfic
     shaded_fraction = total_shadow_area / superficie_campo
     return shaded_fraction.clip(upper=1.0)
 
-# ==================== RADIAZIONE DISPONIBILE ====================
+# ==================== DLI ====================
 
-def calculate_par_distribution(ghi: pd.Series, shaded_fraction: pd.Series,
-                               transmission_under: float = TRANSMISSION_COEFF["under_panel"]) -> dict:
-
+def calculate_dli(ghi: pd.Series, shaded_fraction: pd.Series,
+                  transmission_under: float = TRANSMISSION_COEFF["under_panel"]) -> pd.Series:
+    """
+    Calcola il DLI giornaliero in mol/m²/d considerando la frazione di ombra
+    """
+    # PAR disponibile
     par_total = ghi * PAR_FRACTION
-    par_under = par_total * transmission_under
-    par_between = par_total * TRANSMISSION_COEFF["between_rows"]
+    par_weighted = par_total * (shaded_fraction * transmission_under + (1 - shaded_fraction) * 1.0)
 
-    par_weighted = par_under * shaded_fraction + par_between * (1 - shaded_fraction)
+    # Conversione da W/m² a µmol/m²/s: fattore medio 4.6
+    par_umol = par_weighted * 4.6
 
-    return {
-        "PAR_under_panels_umol": par_under * 4.6,
-        "PAR_between_rows_umol": par_between * 4.6,
-        "PAR_weighted_umol": par_weighted * 4.6,
-        "PAR_weighted_W": par_weighted
-    }
+    # DLI giornaliero (µmol/m²/s → mol/m²/d)
+    dli_mol = (par_umol.sum() * 3600) / 1e6
 
-def calculate_dli_and_hourly_avg(par_weighted_umol: pd.Series) -> dict:
+    return dli_mol
+
+def evaluate_crop_suitability(dli_value: float, crop_name: str) -> dict:
     """
-    Restituisce:
-    - DLI giornaliero (mol/m2/day)
-    - PAR media oraria (µmol/m2/s)
+    Valuta lo stato della coltura in base al DLI giornaliero
     """
-    dli = (par_weighted_umol.sum() * 3600) / 1e6   # DLI giornaliero
-    par_hourly_avg = par_weighted_umol.mean()       # intensità media oraria della PAR
-    
-    return {
-        "DLI_mol_m2_day": dli,
-        "PAR_hourly_avg_umol": par_hourly_avg
-    }
-
-
-def evaluate_crop_suitability(par_under_umol: pd.Series,
-                              par_between_umol: pd.Series,
-                              par_weighted_umol: pd.Series,
-                              crop_name: str) -> dict:
-
-    def get_crop_requirement(name: str):
-        for category, crops in DLI_REQUIREMENTS.items():
-            if name in crops:
-                return crops[name]
-        return None
-
-    requirement_data = get_crop_requirement(crop_name)
+    # Recupero requisiti coltura
+    requirement_data = None
+    for category, crops in DLI_REQUIREMENTS.items():
+        if crop_name in crops:
+            requirement_data = crops[crop_name]
+            break
 
     if requirement_data is None:
         import streamlit as st
-        st.warning(f"⚠️ Crop '{crop_name}' non trovato in DLI_REQUIREMENTS. Uso valori di default 100 mol/m²/d.")
-        DLI_min, DLI_opt = 80, 100  # default values
+        st.warning(f"⚠️ Crop '{crop_name}' non trovato in DLI_REQUIREMENTS. Uso valori di default.")
+        DLI_min, DLI_opt = 80, 100
         unit = "mol/m²/d"
     else:
         DLI_min = requirement_data["DLI_min"]
         DLI_opt = requirement_data["DLI_opt"]
         unit = requirement_data["unit"]
 
-    # Calcolo DLI giornaliero
-    dli_under = (par_under_umol.sum() * 3600) / 1e6
-    dli_between = (par_between_umol.sum() * 3600) / 1e6
-    dli_weighted = (par_weighted_umol.sum() * 3600) / 1e6
-
-    def _dli_status(dli_value):
-        percentage = (dli_value / DLI_opt) * 100
-        if percentage >= 100:
-            status, color = "Ottimale", "green"
-        elif percentage >= 80:
-            status, color = "Adeguato", "orange"
-        elif percentage >= 60:
-            status, color = "Marginale", "darkorange"
-        else:
-            status, color = "Insufficiente", "red"
-        return {"dli": dli_value, "percentage": percentage, "status": status, "color": color, "unit": unit}
+    # Stato coltura
+    percentage = (dli_value / DLI_opt) * 100
+    if percentage >= 100:
+        status, color = "Ottimale", "green"
+    elif percentage >= 80:
+        status, color = "Adeguato", "orange"
+    elif percentage >= 60:
+        status, color = "Marginale", "darkorange"
+    else:
+        status, color = "Insufficiente", "red"
 
     return {
-        "under_panels": _dli_status(dli_under),
-        "between_rows": _dli_status(dli_between),
-        "field_weighted": _dli_status(dli_weighted),
+        "DLI": dli_value,
+        "percentage": percentage,
+        "status": status,
+        "color": color,
         "DLI_min": DLI_min,
         "DLI_opt": DLI_opt,
         "unit": unit
@@ -174,7 +145,6 @@ def evaluate_crop_suitability(par_under_umol: pd.Series,
 
 def calculate_all_agri(params: dict, pv_results: dict) -> dict:
 
-    times = pv_results['times']
     ghi = pv_results['GHI_Wm2']
     superficie_campo = params['hectares'] * HECTARE_M2
     solpos = pv_results["solpos"]
@@ -193,42 +163,25 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
         shadow_df, params['num_panels_total'], superficie_campo
     )
 
-    par_data = calculate_par_distribution(ghi, shaded_fraction)
+    # Calcolo DLI giornaliero
+    dli_value = calculate_dli(ghi, shaded_fraction)
 
-    dli_results = calculate_dli_and_hourly_avg(par_data['PAR_weighted_umol'])
-    crop_eval = evaluate_crop_suitability(
-        par_data['PAR_under_panels_umol'],
-        par_data['PAR_between_rows_umol'],
-        par_data['PAR_weighted_umol'],
-        params.get("crops", "Cereali")
-    )
-
+    # Valutazione coltura
+    crop_eval = evaluate_crop_suitability(dli_value, params.get("crops", "Cereali"))
 
     return {
-        "times": times,
+        "times": pv_results['times'],
         "shaded_fraction": shaded_fraction,
         "shadow_length_m": shadow_df['shadow_length_m'],
         "shadow_area_m2": shadow_df['shadow_area_m2'],
-
-        "PAR_under_panels_umol": par_data['PAR_under_panels_umol'],
-        "PAR_between_rows_umol": par_data['PAR_between_rows_umol'],
-        "PAR_weighted_umol": par_data['PAR_weighted_umol'],
-
-        # Metriche ombra
         "shaded_fraction_avg": shaded_fraction.mean(),
         "shadow_area_max_m2": shadow_df['shadow_area_m2'].max(),
         "shadow_length_max_m": shadow_df['shadow_length_m'].max(),
-
-        # DLI
-        "DLI_mol_m2_day": dli_results["DLI_mol_m2_day"],
-        "PAR_hourly_avg_umol": dli_results["PAR_hourly_avg_umol"],
-
-
-        # Stato coltura
-        "crop_status": crop_eval["field_weighted"]["status"],
-        "crop_status_color": crop_eval["field_weighted"]["color"],
-        "crop_light_adequacy_pct": crop_eval["field_weighted"]["percentage"],
+        "DLI_mol_m2_day": crop_eval["DLI"],
+        "crop_status": crop_eval["status"],
+        "crop_status_color": crop_eval["color"],
+        "crop_light_adequacy_pct": crop_eval["percentage"],
         "DLI_min": crop_eval["DLI_min"],
         "DLI_opt": crop_eval["DLI_opt"],
-        "unit": crop_eval["unit"]   
+        "unit": crop_eval["unit"]
     }

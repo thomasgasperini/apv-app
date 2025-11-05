@@ -191,29 +191,23 @@ def generate_geometric_metrics(results: dict) -> list:
 
 def generate_agri_metrics(agri_results: dict) -> list:
     """
-    Genera card per metriche agrivoltaiche
+    Genera card per metriche agrivoltaiche semplificate
     """
 
     crop_color = agri_results.get('crop_status_color', None)
-    
-    return [
-            create_metric_card(
-                "DLI totale giornaliero",
-                f"{format_value(agri_results['DLI_mol_m2_day'], 'mol/m²·day', 1)}",
-                "Totale giornaliero di luce fotosinteticamente attiva"
-            ),
 
-            create_metric_card(
-                "PPFD medio diurno",
-                f"{format_value(agri_results['PAR_hourly_avg_umol'], 'µmol/m²·s', 0)}",
-                "Flusso medio di fotoni PAR durante le ore di luce (intensità luminosa)"
-            ),
+    return [
+        create_metric_card(
+            "DLI totale giornaliero",
+            f"{format_value(agri_results['DLI_mol_m2_day'], 'mol/m²·day', 1)}",
+            "Totale giornaliero di luce fotosinteticamente attiva"
+        ),
 
         create_metric_card( 
             "DLI Richiesto",
             f"{format_value(agri_results['DLI_min'], agri_results['unit'])}<br>"
             f"{format_value(agri_results['DLI_opt'], agri_results['unit'])}",
-            "Fabbisogno giornaliero di luce fotosinteticamente attiva della coltura (min - ottimale)"
+            "Fabbisogno giornaliero della coltura (min - ottimale)"
         ),
 
         create_metric_card(
@@ -242,6 +236,7 @@ def generate_agri_metrics(agri_results: dict) -> list:
             "Area massima in ombra rilevata sul campo durante la giornata"
         ),
     ]
+
 
 
 # ==================== FUNZIONE PRINCIPALE ====================
