@@ -379,4 +379,4 @@ def show_pv_guide():
 
 if __name__ == "__main__":
     st.set_page_config(page_title="Guida Calcoli", layout="wide")
-    show_guide()
+    show_pv_guide()
