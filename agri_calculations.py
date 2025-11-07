@@ -2,7 +2,7 @@
 Modulo Calcoli Agricoli - Parametri agrivoltaico (microclima rimosso)
 Analizza l'impatto dei pannelli FV sulle colture sottostanti tramite DLI
 """
-
+# sito enea per DLI mensile italiano: https://www.solaritaly.enea.it/DLI/DLIMappeEn.php#:~:text=Maps%20of%20Daily%20Light%20Integral%20in%20Italy.,moles%20per%20square%20meter%20per%20day:%20mol/(m%C2%B2%C2%B7d).
 import pandas as pd
 import math
 from config import HECTARE_M2
@@ -20,9 +20,9 @@ PAR_FRACTION = 0.45  # PAR = 45% GHI
 DLI_REQUIREMENTS = {
     "Piante basse": {
         "Microgreens": {"DLI_min": 8, "DLI_opt": 12, "unit": "mol/m²/d"},
-        "Ortaggi a foglia": {"DLI_min": 12, "DLI_opt": 18, "unit": "mol/m²/d"},
+        "Ortaggi a foglia": {"DLI_min": 12, "DLI_opt": 20, "unit": "mol/m²/d"},
         "Tuberi": {"DLI_min": 15, "DLI_opt": 20, "unit": "mol/m²/d"},
-        "Ortaggi da frutto bassi": {"DLI_min": 18, "DLI_opt": 22, "unit": "mol/m²/d"},
+        "Ortaggi da frutto bassi": {"DLI_min": 20, "DLI_opt": 30, "unit": "mol/m²/d"},
     },
     "Piante alte": {
         "Cereali": {"DLI_min": 20, "DLI_opt": 25, "unit": "mol/m²/d"},
