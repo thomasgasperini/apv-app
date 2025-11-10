@@ -297,7 +297,7 @@ def get_all_panel_params():
         "lato_minore": lato_minore,
         "area_pannello": area,
         "carreggiata": carreggiata,
-        "pitch_laterale": pitch,
+        "pitch_laterale": pitch, # AL MOMENTO NON USATO NEI CALCOLI 10/11/2025 h 15:34
         "altezza_suolo": altezza_suolo,  # AL MOMENTO NON USATO NEI CALCOLI 31/10/2025 h 12:15
         "tilt_pannello": tilt,
         "azimuth_pannello": azimuth,

@@ -44,7 +44,6 @@ def create_location_map(lat: float, lon: float, comune: str) -> folium.Map:
     ).add_to(m)
     return m
 
-
 # ==================== INFO BOX ====================
 
 def format_info_item(name: str, value) -> str:
@@ -127,7 +126,6 @@ def create_info_box_html(params: dict, max_height: int = 600) -> str:
         }}
     </style>
     """
-
 
 # ==================== FUNZIONE PRINCIPALE ====================
 
