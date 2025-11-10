@@ -8,10 +8,10 @@ import streamlit as st
 def show_pv_guide():
     """Visualizza documentazione tecnica completa in expander"""
     
-    with st.expander("📘 GUIDA TECNICA - Documentazione Calcoli", expanded=False):
+    with st.expander("📘 GUIDA TECNICA", expanded=False, ):
         st.markdown("""
         # DOCUMENTAZIONE TECNICA
-        ## Simulatore Fotovoltaico Agrivoltaico
+        ## Simulatore  Agrivoltaico
         
         ---
         
@@ -24,18 +24,18 @@ def show_pv_guide():
         - **Timezone**: `ZoneInfo("Europe/Rome")`, fisso
         
         ### 1.2 Layout Pannelli
-        - **Pannelli per fila**: input utente (default: 5)
-        - **Numero file**: input utente (default: 2)
-        - **Totale pannelli**: calcolato come $N_{tot} = N_{fila} \\times N_{file}$
-        - **Lato maggiore** [m]: input utente (default: 2.5)
-        - **Lato minore** [m]: input utente (default: 2.0)
-        - **Area pannello** [m²]: calcolata come $A_{pan} = L_{mag} \\times L_{min}$
+        - **Pannelli per fila** ($N_{fila}$): input utente (default: 5)
+        - **Numero file** ($N_{file}$): input utente (default: 2)
+        - **Totale pannelli** ($N_{tot}$): calcolato come $N_{tot} = N_{fila} \\times N_{file}$
+        - **Lato maggiore** [m] ($L_{mag}$) : input utente (default: 2.5)
+        - **Lato minore** [m] ($L_{min}$): input utente (default: 2.0)
+        - **Area pannello** [m²] ($A_{pan}$): calcolata come $A_{pan} = L_{mag} \\times L_{min}$
         
-        ### 1.3 Geometria Installazione
+        ### 1.3 Geometria Pannelli
         - **Distanza tra file (carreggiata)** [m]: input utente (default: 5.0)
         - **Pitch laterale** [m]: input utente (default: 3.0)
         - **Altezza dal suolo** [m]: input utente (default: 1.0)
-        - **Tilt** [°]: input utente slider 0-90 (default: 30)
+        - **Tilt** [°] (β): input utente slider 0-90 (default: 30)
         - **Azimuth** [°]: input utente slider 0-360, 180=Sud (default: 180)
         
         ### 1.4 Caratteristiche Elettriche Pannelli
@@ -47,7 +47,7 @@ def show_pv_guide():
         
         ### 1.5 Parametri Campo
         - **Ettari totali**: input utente (default: 1.0)
-        - **Superficie campo** [m²]: $A_{campo} = ettari \\times 10000$
+        - **Superficie campo** [m²] ($A_{campo}$): $A_{campo} = ettari \\times 10000$
         - **Tipo coltura**: selezione da lista predefinita (default: "Microgreens")
         
         ---
@@ -58,9 +58,7 @@ def show_pv_guide():
         ### 2.1 Proiezione Pannello al Suolo
         **Formula teorica**: 
         
-        $$A_{proj} = A_{nominale} \\cdot \\cos(\\beta)$$
-        
-        dove $\\beta$ = tilt del pannello
+        $$A_{proj} = A_{pan} \\cdot \\cos(\\beta)$$ dove $\\beta$ = tilt del pannello
         
         **Implementazione**:
         ```python
@@ -71,7 +69,7 @@ def show_pv_guide():
         ### 2.2 Ground Coverage Ratio (GCR)
         **Formula teorica**: 
         
-        $$GCR = \\frac{A_{proiezione}}{A_{campo}}$$
+        $$GCR = \\frac{A_{proj}}{A_{campo}}$$
         
         **Implementazione**:
         ```python
@@ -82,7 +80,7 @@ def show_pv_guide():
         ### 2.3 Superficie Libera
         **Formula teorica**: 
         
-        $$A_{libera} = A_{campo} - A_{proiezione}$$
+        $$A_{libera} = A_{campo} - A_{proj}$$
         
         **Implementazione**:
         ```python
@@ -93,8 +91,8 @@ def show_pv_guide():
         
         ## 3. CALCOLI SOLARI
         **Modulo**: `calculations.py`  
-        **Libreria principale**: `pvlib` (NREL)
-        
+        **Libreria principale**: `pvlib` 
+       
         ### 3.1 Posizione Solare
         **Libreria**: `pvlib.solarposition.get_solarposition()`
         
@@ -161,7 +159,26 @@ def show_pv_guide():
         
         **Implementazione**:
         ```python
-        T_amb = T_media + escursione * sin(π(h-6)/12)
+        month = times[0].month
+          
+          # Stima temperatura media e ampiezza giornaliera per stagione
+          if month in [12, 1, 2]:      # Inverno
+              T_media = 8 - (lat - 40) * 0.5
+              escursione = 6
+          elif month in [3, 4, 5]:     # Primavera
+              T_media = 15 - (lat - 40) * 0.3
+              escursione = 8
+          elif month in [6, 7, 8]:     # Estate
+              T_media = 26 - (lat - 40) * 0.4
+              escursione = 10
+          else:                        # Autunno
+              T_media = 16 - (lat - 40) * 0.3
+              escursione = 7
+          
+          # Calcolo andamento sinusoidale (minimo alle 6:00, massimo alle 14:00)
+          hours = times.hour
+          T_amb = T_media + escursione * pd.Series(
+              [math.sin(math.pi * (h - 6) / 12) for h in hours], index=times)
         ```
         
         ---
@@ -221,7 +238,7 @@ def show_pv_guide():
         
         ---
         
-        ## 5. CALCOLI AGRIVOLTAICI
+        ## 5. CALCOLI AGRONOMICI
         **Modulo**: `agri_calculations.py`
         
         ### 5.1 Proiezione Ombra Dinamica
