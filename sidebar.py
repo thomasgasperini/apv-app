@@ -100,31 +100,6 @@ def get_location_from_comune(comune: str, max_retries: int = 3):
 
     return None, None, None
 
-
-def get_location_and_date():
-    """Input comune -> geocoding o inserimento manuale -> data simulazione"""
-    comune = st.sidebar.text_input("Comune", value=DEFAULT_PARAMS["comune"])
-    lat, lon, location = get_location_from_comune(comune)
-
-    if not lat or not lon:
-        st.sidebar.warning(f"⚠️ Impossibile geolocalizzare '{comune}'. Inserisci coordinate manualmente.")
-        col1, col2 = st.sidebar.columns(2)
-        lat = col1.number_input("Latitudine [°]", value=DEFAULT_PARAMS["lat"], format="%.4f")
-        lon = col2.number_input("Longitudine [°]", value=DEFAULT_PARAMS["lon"], format="%.4f")
-        location = None
-
-    data_sim = st.sidebar.date_input("Data simulazione", value=date.today())
-
-    return {
-        "comune": comune,
-        "lat": lat,
-        "lon": lon,
-        "timezone": TIMEZONE_OBJ,
-        "location": location,
-        "data": data_sim
-    }
-
-
 # ==================== SEZIONI INPUT ====================
 
 def get_location_and_date():

@@ -187,6 +187,12 @@ def generate_geometric_metrics(results: dict) -> list:
             f"{format_value(results['superficie_libera'], 'm²', 0)}",
             "Terreno libero disponibile (campo - proiezione pannelli)"
         ),
+
+        create_metric_card(
+            "Pannelli installabili",
+            f"{format_value(results['total_panels'], '', 0)}",
+            "N. pannelli installabili secondo dimensionamento (campo/pannelli)"
+        )
     ]
 
 def generate_agri_metrics(agri_results: dict) -> list:
@@ -252,7 +258,7 @@ def display_metrics(results: dict, params: dict):
     # SEZIONE 1: Irradiamento Solare
     st.markdown(
         '<p class="section-header" style="margin-top: 1rem;">'
-        'Irradiamento Solare'
+        'Irradiamento Solare e Temperatura Pannelli'
         '</p>',
         unsafe_allow_html=True
     )
@@ -269,7 +275,7 @@ def display_metrics(results: dict, params: dict):
     production_cards = generate_production_metrics(results)
     display_card_group(production_cards)
     
-    # SEZIONE 3: Geometria e Copertura
+    # SEZIONE 3: Copertura Terreno e Dimensionamento
     st.markdown(
         '<p class="section-header" style="margin-top: 1rem;">'
         'Geometria e Copertura Terreno'

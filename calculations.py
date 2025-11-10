@@ -16,6 +16,51 @@ def calculate_ground_projection(area: float, tilt: float) -> float:
     """
     return area * math.cos(math.radians(tilt))
 
+def calculate_max_panels(params: dict) -> dict:
+    """
+    Calcola quanti pannelli fotovoltaici possono essere installati
+    nel campo, dati ettari, dimensioni pannelli, carreggiata e pitch laterale.
+
+    Parametri richiesti in `params`:
+        - hectares: superficie disponibile (ettari)
+        - lato_maggiore: lato lungo del pannello (m)
+        - lato_minore: lato corto del pannello (m)
+        - pitch_laterale: distanza tra centri dei pannelli (m)
+        - carreggiata: distanza tra le file di pannelli (m)
+
+    Ritorna:
+        dict con:
+            - max_panels_per_row
+            - max_rows
+            - total_panels
+            - spazio_laterale_libero_m
+            - spazio_longitudinale_libero_m
+            - lato_campo_stimato_m
+    """
+    # Calcola lato del campo (approssimazione quadrato)
+    campo_m2 = params["hectares"] * HECTARE_M2
+    lato_campo = math.sqrt(campo_m2)
+
+    # Numero massimo di pannelli per fila (orizzontale)
+    max_panels_per_row = int(lato_campo / params["pitch_laterale"])
+    spazio_laterale_libero = lato_campo - max_panels_per_row * params["pitch_laterale"]
+
+    # Numero massimo di file (verticale/longitudinale)
+    spazio_per_fila = params["lato_minore"] + params["carreggiata"]
+    max_rows = int(lato_campo / spazio_per_fila)
+    spazio_longitudinale_libero = lato_campo - max_rows * spazio_per_fila
+
+    # Totale pannelli
+    total_panels = max_panels_per_row * max_rows
+
+    return {
+        "lato_campo_stimato_m": lato_campo,
+        "max_panels_per_row": max_panels_per_row,
+        "max_rows": max_rows,
+        "total_panels": total_panels,
+        "spazio_laterale_libero_m": spazio_laterale_libero,
+        "spazio_longitudinale_libero_m": spazio_longitudinale_libero
+    }
 
 def calculate_panel_metrics(params: dict) -> dict:
     """
@@ -173,6 +218,7 @@ def calculate_all_pv(params: dict) -> dict:
     
     # Calcoli geometrici
     panel_metrics = calculate_panel_metrics(params)
+    max_panels_info = calculate_max_panels(params)
     occupied_space = calculate_occupied_space(params, panel_metrics)
     
     # Calcoli solari
@@ -205,6 +251,7 @@ def calculate_all_pv(params: dict) -> dict:
         # Metriche geometriche
         **panel_metrics,
         **occupied_space,
+        **max_panels_info,
         
         # Produzione elettrica
         **production

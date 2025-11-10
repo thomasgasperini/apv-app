@@ -6,7 +6,7 @@ Analizza l'impatto dei pannelli FV sulle colture sottostanti tramite DLI
 import pandas as pd
 import math
 from config import HECTARE_M2
-from sidebar import area_pannello
+
 # ==================== COSTANTI AGRONOMICHE ====================
 
 TRANSMISSION_COEFF = {
@@ -42,6 +42,7 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
                                 altezza_suolo: float) -> pd.DataFrame:
 
     tilt_rad = math.radians(tilt)
+    area_pannello = lato_maggiore * lato_minore
     H = altezza_suolo + lato_minore * math.sin(tilt_rad)
 
     shadow_length, shadow_width, shadow_area = [], [], []
@@ -59,7 +60,7 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
             delta_azimuth = 360 - delta_azimuth
 
         L_shadow = H / math.tan(elev_rad)
-        W_shadow = (params["area_pannello"] * math.cos(tilt_rad)) / max(L_shadow, 1e-6)
+        W_shadow = (area_pannello * math.cos(tilt_rad)) / max(L_shadow, 1e-6)
         W_shadow *= abs(math.cos(math.radians(delta_azimuth)))
         A_shadow = L_shadow * W_shadow
 
@@ -74,10 +75,24 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
     }, index=sun_elevation.index)
 
 
-def calculate_shaded_fraction(shadow_df: pd.DataFrame, num_panels: int, superficie_campo: float) -> pd.Series:
-    total_shadow_area = shadow_df['shadow_area_m2'] * num_panels
-    shaded_fraction = total_shadow_area / superficie_campo
+def calculate_shaded_fraction(shadow_df: pd.DataFrame, num_panels: int, superficie_campo: float, pitch: float) -> pd.Series:
+
+    effective_shadow_area = []
+
+    for L_shadow, A_shadow in zip(shadow_df['shadow_length_m'], shadow_df['shadow_area_m2']):
+        if L_shadow <= pitch or L_shadow == 0:
+            # Nessuna sovrapposizione
+            A_eff = A_shadow * num_panels
+        else:
+            # Riduzione proporzionale per sovrapposizione
+            overlap_factor = pitch / L_shadow
+            A_eff = A_shadow * num_panels * overlap_factor
+        
+        effective_shadow_area.append(A_eff)
+    
+    shaded_fraction = pd.Series(effective_shadow_area, index=shadow_df.index) / superficie_campo
     return shaded_fraction.clip(upper=1.0)
+
 
 # ==================== DLI ====================
 
@@ -159,7 +174,10 @@ def calculate_all_agri(params: dict, pv_results: dict) -> dict:
     )
 
     shaded_fraction = calculate_shaded_fraction(
-        shadow_df, params['num_panels_total'], superficie_campo
+        shadow_df, 
+        params['num_panels_total'], 
+        superficie_campo,
+        params.get('pitch_laterale', 1.0)  # usa il pitch definito nel sidebar
     )
 
     # Calcolo DLI giornaliero
