@@ -6,7 +6,7 @@ Analizza l'impatto dei pannelli FV sulle colture sottostanti tramite DLI
 import pandas as pd
 import math
 from config import HECTARE_M2
-
+from sidebar import area_pannello
 # ==================== COSTANTI AGRONOMICHE ====================
 
 TRANSMISSION_COEFF = {
@@ -42,7 +42,6 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
                                 altezza_suolo: float) -> pd.DataFrame:
 
     tilt_rad = math.radians(tilt)
-    area_pannello = lato_maggiore * lato_minore
     H = altezza_suolo + lato_minore * math.sin(tilt_rad)
 
     shadow_length, shadow_width, shadow_area = [], [], []
@@ -60,7 +59,7 @@ def calculate_shadow_projection(lato_maggiore: float, lato_minore: float,
             delta_azimuth = 360 - delta_azimuth
 
         L_shadow = H / math.tan(elev_rad)
-        W_shadow = (area_pannello * math.cos(tilt_rad)) / max(L_shadow, 1e-6)
+        W_shadow = (params["area_pannello"] * math.cos(tilt_rad)) / max(L_shadow, 1e-6)
         W_shadow *= abs(math.cos(math.radians(delta_azimuth)))
         A_shadow = L_shadow * W_shadow
 
