@@ -274,7 +274,7 @@ def show_pv_guide():
         ### 5.2 Frazione Ombreggiata del Campo
         **Formula teorica**: 
         
-        $$f_{ombra} = \\frac{A_{ombra} \\cdot N_{pannelli}}{A_{campo}}$$
+        $$f_{ombra} = \\frac{A_{ombra} \\cdot N_{tot}}{A_{campo}}$$
         
         clip a 1.0 (max 100%)
         
@@ -395,5 +395,5 @@ def show_pv_guide():
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Guida Calcoli", layout="wide")
+    st.set_page_config(page_title="Guida Calcoli")
     show_pv_guide()
