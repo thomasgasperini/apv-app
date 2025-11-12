@@ -130,7 +130,6 @@ def get_location_and_date():
     }
 
 
-
 def get_all_panel_params():
     """Raccoglie tutti i parametri dei pannelli in un unico expander"""
     
@@ -144,14 +143,14 @@ def get_all_panel_params():
             value=int(DEFAULT_PARAMS["num_panels_per_row"]),
             min_value=1,
             step=1,
-            help="Numero moduli in ogni fila"
+            help="Numero pannelli in ogni fila"
         )
         num_rows = col2.number_input(
-            "Numero File/Righe",
+            "Numero File",
             value=int(DEFAULT_PARAMS["num_rows"]),
             min_value=1,
             step=1,
-            help="Numero di file di moduli"
+            help="Numero di file di pannelli"
         )
 
         num_panels_total = num_per_row * num_rows
@@ -162,7 +161,7 @@ def get_all_panel_params():
             "Totale Pannelli",
             value=str(num_panels_total),
             disabled=True,
-            help="Numero totale moduli installati"
+            help="Numero totale pannelli installati"
         )
         
         # Altezza sostituisce Ettari
@@ -172,7 +171,7 @@ def get_all_panel_params():
             min_value=0.1,
             max_value=10.0,
             step=0.1,
-            help="Distanza tra la base del modulo e il terreno"
+            help="Distanza tra la base del pannello e il terreno"
         )
 
         # --- Dimensioni moduli ---
@@ -199,14 +198,14 @@ def get_all_panel_params():
             "Area Pannello [m²]",
             value=f"{area:.2f}",
             disabled=True,
-            help="Superficie di un modulo"
+            help="Superficie di un pannello"
         )
 
         # --- Spaziatura ---
         col1, col2 = st.columns(2)
 
         carreggiata = col1.number_input(
-            "Distanza tra File [m]",
+            "Carreggiata [m]",
             value=float(DEFAULT_PARAMS["carreggiata"]),
             min_value=0.0,
             step=0.5,
@@ -217,7 +216,7 @@ def get_all_panel_params():
             value=float(DEFAULT_PARAMS["pitch_laterale"]),
             min_value=0.0,
             step=0.1,
-            help="Spaziatura orizzontale tra moduli"
+            help="Distanza tra centri di pannelli"
         )
 
         # --- Orientamento ---
@@ -233,7 +232,7 @@ def get_all_panel_params():
             "Azimuth [°]",
             0, 360,
             int(DEFAULT_PARAMS["azimuth"]),
-            help="Direzione del modulo"
+            help="Direzione del pannello"
         )
 
         # --- Parametri elettrici ---
@@ -245,7 +244,7 @@ def get_all_panel_params():
             min_value=0.1,
             max_value=100.0,
             step=0.5,
-            help="Rendimento modulo fotovoltaico"
+            help="Rendimento del pannello fotovoltaico"
         ) / 100
 
         temp_coeff = col2.number_input(
@@ -261,7 +260,7 @@ def get_all_panel_params():
             min_value=20.0,
             max_value=60.0,
             step=1.0,
-            help="Temperatura operativa tipica del modulo"
+            help="Temperatura operativa tipica del pannello"
         )
 
     return {
@@ -272,8 +271,8 @@ def get_all_panel_params():
         "lato_minore": lato_minore,
         "area_pannello": area,
         "carreggiata": carreggiata,
-        "pitch_laterale": pitch, # AL MOMENTO NON USATO NEI CALCOLI 10/11/2025 h 15:34
-        "altezza_suolo": altezza_suolo,  # AL MOMENTO NON USATO NEI CALCOLI 31/10/2025 h 12:15
+        "pitch_laterale": pitch, 
+        "altezza_suolo": altezza_suolo,  
         "tilt_pannello": tilt,
         "azimuth_pannello": azimuth,
         "eff": eff,
