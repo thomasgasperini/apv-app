@@ -2,7 +2,7 @@ import os
 import subprocess
 from datetime import datetime
 
-REPO_PATH = r"C:\Users\Thomas\Desktop\Lavoro_050325\1) Progetti In Corso\Prova_Software_APV"
+REPO_PATH = r"C:\Users\Thomas\Desktop\Lavoro_251125\1) Progetti In Corso\Prova_Software_APV"
 
 def run_command(cmd, cwd=None):
     """Esegue un comando shell e stampa l'output."""
